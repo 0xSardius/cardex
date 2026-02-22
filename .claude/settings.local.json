@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.cdp.coinbase.com)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
