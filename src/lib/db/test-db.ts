@@ -59,13 +59,34 @@ async function main() {
   }
   console.log();
 
+  // Test 4b: MTG card lookup — Lightning Bolt
+  console.log("4b. MTG Lightning Bolt lookup...");
+  const bolts = await db
+    .select({
+      name: schema.collectibles.name,
+      setNumber: schema.collectibles.setNumber,
+      rarity: schema.collectibles.rarity,
+      treatment: schema.collectibles.treatment,
+      setName: schema.sets.name,
+    })
+    .from(schema.collectibles)
+    .leftJoin(schema.sets, eq(schema.collectibles.setId, schema.sets.id))
+    .where(ilike(schema.collectibles.name, "Lightning Bolt"))
+    .limit(10);
+
+  console.log(`   Found ${bolts.length} Lightning Bolt printings (showing up to 10):`);
+  for (const b of bolts) {
+    console.log(`   - ${b.name} (${b.setName} #${b.setNumber}) [${b.rarity}] ${b.treatment}`);
+  }
+  console.log();
+
   // Test 5: Fuzzy search with pg_trgm
-  console.log("5. Fuzzy search (pg_trgm) — 'pikchu' (misspelled)...");
+  console.log("5. Fuzzy search (pg_trgm) — 'lighning bolt' (misspelled)...");
   try {
     const fuzzyResult: any = await db.execute(
       sql`SELECT name, set_number FROM collectibles
-          WHERE name % 'pikchu'
-          ORDER BY similarity(name, 'pikchu') DESC
+          WHERE name % 'lighning bolt'
+          ORDER BY similarity(name, 'lighning bolt') DESC
           LIMIT 5`
     );
     const fuzzyRows = fuzzyResult.rows ?? fuzzyResult;

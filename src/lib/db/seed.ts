@@ -7,6 +7,7 @@
  */
 
 import "dotenv/config";
+import https from "node:https";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { sets, collectibles } from "./schema";
@@ -51,8 +52,8 @@ async function main() {
   // --- Step 1: Seed Sets ---
   console.log("Fetching sets...");
   const setsRes = await fetchWithRetry(`${POKEMON_TCG_API}/sets?orderBy=releaseDate&pageSize=250`);
-  if (!setsRes.ok) throw new Error(`Sets fetch failed: ${setsRes.status}`);
-  const setsData = (await setsRes.json()) as { data: PokemonSet[] };
+  if (setsRes.status !== 200) throw new Error(`Sets fetch failed: ${setsRes.status}`);
+  const setsData = JSON.parse(setsRes.body) as { data: PokemonSet[] };
   console.log(`Found ${setsData.data.length} sets`);
 
   const setMap = new Map<string, string>(); // pokemontcg.io set id -> our DB uuid
@@ -97,16 +98,14 @@ async function main() {
     console.log(`  Page ${page}...`);
 
     const cardsRes = await fetchWithRetry(url);
-    if (!cardsRes.ok) {
-      if (cardsRes.status === 429) {
-        console.log("  Rate limited, waiting 5s...");
-        await sleep(5000);
-        continue;
-      }
-      throw new Error(`Cards fetch failed: ${cardsRes.status}`);
+    if (cardsRes.status === 429) {
+      console.log("  Rate limited, waiting 5s...");
+      await sleep(5000);
+      continue;
     }
+    if (cardsRes.status !== 200) throw new Error(`Cards fetch failed: ${cardsRes.status}`);
 
-    const cardsData = (await cardsRes.json()) as { data: PokemonCard[]; totalCount: number };
+    const cardsData = JSON.parse(cardsRes.body) as { data: PokemonCard[]; totalCount: number };
     const cards = cardsData.data;
 
     if (cards.length === 0) {
@@ -180,10 +179,22 @@ function extractTcgplayerId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
+function httpsGet(url: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { "User-Agent": "CardEx/0.1" } }, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+    });
+    req.on("error", reject);
+    req.setTimeout(30000, () => { req.destroy(); reject(new Error("timeout")); });
+  });
+}
+
+async function fetchWithRetry(url: string, retries = 3): Promise<{ status: number; body: string }> {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetchWithRetry(url);
+      const res = await httpsGet(url);
       return res;
     } catch (err) {
       if (i === retries - 1) throw err;
