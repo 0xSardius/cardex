@@ -231,3 +231,22 @@ export const portfolioItems = pgTable(
   },
   (t) => [index("portfolio_items_portfolio_idx").on(t.portfolioId)]
 );
+
+// ─── Payment Events (x402 ledger) ─────────────────────────────────────────────
+
+export const paymentEvents = pgTable(
+  "payment_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    endpoint: varchar("endpoint", { length: 255 }).notNull(),
+    amountUsd: decimal("amount_usd", { precision: 12, scale: 6 }).notNull(),
+    payerAddress: varchar("payer_address", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("payment_events_endpoint_idx").on(t.endpoint),
+    index("payment_events_created_at_idx").on(t.createdAt),
+  ]
+);

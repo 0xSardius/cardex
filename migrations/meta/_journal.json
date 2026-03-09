@@ -8,6 +8,13 @@
       "when": 1772759102287,
       "tag": "0000_legal_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773018051437,
+      "tag": "0001_dark_strong_guy",
+      "breakpoints": true
     }
   ]
 }
