@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { collectibles, sets, pricePoints } from "@/lib/db/schema";
+import { collectibles, sets, pricePoints, marketSnapshots } from "@/lib/db/schema";
 import { eq, ilike, desc, and, sql } from "drizzle-orm";
 import { recordPayment } from "@/lib/x402/payments";
 
@@ -99,23 +99,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Enrich fuzzy results with prices
+    const enriched = await Promise.all(
+      fuzzyRows.map(async (row: any) => {
+        const prices = await db
+          .select()
+          .from(pricePoints)
+          .where(eq(pricePoints.collectibleId, row.id))
+          .orderBy(desc(pricePoints.observedAt))
+          .limit(5);
+
+        return {
+          ...formatCardResult(row),
+          prices: prices.map((p) => ({
+            source: p.source,
+            condition: p.condition,
+            priceUsd: p.priceUsd,
+            currency: p.currency,
+            listingType: p.listingType,
+            observedAt: p.observedAt,
+          })),
+        };
+      })
+    );
+
     return NextResponse.json({
       exact: false,
       query: { name: body.name, game, set: body.set },
-      results: fuzzyRows.map(formatCardResult),
+      results: enriched,
       agent: agentMeta(),
     });
   }
 
-  // Get latest prices for each card (when we have price data)
+  // Get latest prices and market snapshot for each card
   const results = await Promise.all(
     cards.map(async (card) => {
-      const prices = await db
-        .select()
-        .from(pricePoints)
-        .where(eq(pricePoints.collectibleId, card.id))
-        .orderBy(desc(pricePoints.observedAt))
-        .limit(5);
+      const [prices, snapshot] = await Promise.all([
+        db
+          .select()
+          .from(pricePoints)
+          .where(eq(pricePoints.collectibleId, card.id))
+          .orderBy(desc(pricePoints.observedAt))
+          .limit(10),
+        db
+          .select()
+          .from(marketSnapshots)
+          .where(eq(marketSnapshots.collectibleId, card.id))
+          .orderBy(desc(marketSnapshots.date))
+          .limit(1),
+      ]);
 
       return {
         card: {
@@ -137,9 +169,21 @@ export async function POST(request: NextRequest) {
           source: p.source,
           condition: p.condition,
           priceUsd: p.priceUsd,
+          currency: p.currency,
           listingType: p.listingType,
           observedAt: p.observedAt,
         })),
+        market: snapshot[0]
+          ? {
+              date: snapshot[0].date,
+              avgPrice: snapshot[0].avgPrice,
+              medianPrice: snapshot[0].medianPrice,
+              lowPrice: snapshot[0].lowPrice,
+              highPrice: snapshot[0].highPrice,
+              trend7d: snapshot[0].trend7d,
+              trend30d: snapshot[0].trend30d,
+            }
+          : null,
       };
     })
   );
@@ -168,7 +212,7 @@ function formatCardResult(row: any) {
       tcgplayerId: row.tcgplayer_id,
     },
     similarity: row.sim,
-    prices: [], // No price data yet — Phase 5
+    prices: []
   };
 }
 

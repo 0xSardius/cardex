@@ -13,7 +13,9 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx src/lib/db/seed.ts",
-    "db:seed:mtg": "npx tsx src/lib/db/seed-mtg.ts"
+    "db:seed:mtg": "npx tsx src/lib/db/seed-mtg.ts",
+    "ingest:prices": "npx tsx src/lib/ingestion/scryfall-prices.ts",
+    "ingest:snapshots": "npx tsx src/lib/ingestion/aggregate-snapshots.ts"
   },
   "dependencies": {
     "@lucid-agents/payments": "^2.5.0",
