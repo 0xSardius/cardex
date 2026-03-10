@@ -37,10 +37,10 @@ async function main() {
       pp.collectible_id,
       pp.condition,
       CURRENT_DATE,
-      ROUND(AVG(pp.price_usd::numeric), 2),
-      ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pp.price_usd::numeric), 2),
-      ROUND(MIN(pp.price_usd::numeric), 2),
-      ROUND(MAX(pp.price_usd::numeric), 2),
+      ROUND(AVG(pp.price_usd::numeric)::numeric, 2),
+      ROUND((PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pp.price_usd::numeric))::numeric, 2),
+      ROUND(MIN(pp.price_usd::numeric)::numeric, 2),
+      ROUND(MAX(pp.price_usd::numeric)::numeric, 2),
       COUNT(*)::int,
       COUNT(DISTINCT pp.source)::int
     FROM price_points pp

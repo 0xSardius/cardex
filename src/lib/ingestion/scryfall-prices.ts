@@ -4,7 +4,9 @@
  * Fetches current prices from Scryfall for all MTG cards in our DB
  * and inserts them as price_points. Scryfall updates prices daily.
  *
- * Usage: npx tsx src/lib/ingestion/scryfall-prices.ts
+ * Usage: npx tsx src/lib/ingestion/scryfall-prices.ts [startPage]
+ *   startPage — optional, resume from this page (default: 1)
+ *
  * Requires: DATABASE_URL env var
  *
  * Sources embedded in Scryfall prices:
@@ -15,12 +17,9 @@
 
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { eq, sql } from "drizzle-orm";
-import { collectibles, pricePoints } from "../db/schema";
 
 const SCRYFALL_API = "https://api.scryfall.com";
-const BATCH_SIZE = 50;
+const SQL_BATCH_SIZE = 25; // rows per INSERT statement
 
 interface ScryfallPriceCard {
   id: string;
@@ -34,183 +33,137 @@ interface ScryfallPriceCard {
   };
 }
 
+interface PriceRow {
+  collectibleId: string;
+  source: string;
+  condition: string;
+  priceUsd: string;
+  priceNative: string | null;
+  currency: string;
+  listingType: string;
+  confidence: number;
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.error("DATABASE_URL is required");
     process.exit(1);
   }
 
-  const client = neon(process.env.DATABASE_URL);
-  const db = drizzle(client);
+  const startPage = parseInt(process.argv[2] ?? "1");
+  const sql = neon(process.env.DATABASE_URL);
 
   console.log("Scryfall Price Ingestion\n");
 
-  // Get all MTG card external IDs from our DB
+  // Build lookup map: scryfall_id -> our DB uuid
   console.log("Fetching card IDs from DB...");
-  const cards = await db
-    .select({
-      id: collectibles.id,
-      externalId: collectibles.externalId,
-      foil: collectibles.foil,
-    })
-    .from(collectibles)
-    .where(eq(collectibles.game, "mtg"));
+  const cards = await sql`
+    SELECT id, external_id FROM collectibles WHERE game = 'mtg' AND external_id IS NOT NULL
+  `;
+  const idMap = new Map<string, string>();
+  for (const c of cards) {
+    idMap.set(c.external_id, c.id);
+  }
+  console.log(`Found ${idMap.size} MTG cards in DB\n`);
 
-  console.log(`Found ${cards.length} MTG cards in DB\n`);
-
-  // Fetch prices via Scryfall paginated search (same as seed, but only need prices)
+  // Paginate through Scryfall
   let nextUrl: string | null =
-    `${SCRYFALL_API}/cards/search?q=game%3Apaper&unique=prints&order=set&page=1`;
+    `${SCRYFALL_API}/cards/search?q=game%3Apaper&unique=prints&order=set&page=${startPage}`;
   let totalProcessed = 0;
   let totalPricePoints = 0;
-  let pageNum = 1;
-
-  // Build lookup map: scryfall_id -> our DB id
-  const idMap = new Map<string, { dbId: string; foil: boolean | null }>();
-  for (const c of cards) {
-    if (c.externalId) {
-      idMap.set(c.externalId, { dbId: c.id, foil: c.foil });
-    }
-  }
-
-  let priceBatch: Array<typeof pricePoints.$inferInsert> = [];
+  let pageNum = startPage;
+  let consecutiveErrors = 0;
 
   while (nextUrl) {
     console.log(`  Page ${pageNum}...`);
-    const pageData = await fetchJson(nextUrl);
+
+    let pageData: any;
+    try {
+      pageData = await fetchJson(nextUrl);
+    } catch (err: any) {
+      console.error(`  Scryfall fetch failed on page ${pageNum}: ${err.message}`);
+      break;
+    }
+
     const scryfallCards: ScryfallPriceCard[] = pageData.data;
+    const rows: PriceRow[] = [];
 
     for (const sc of scryfallCards) {
-      const entry = idMap.get(sc.id);
-      if (!entry) continue;
+      const dbId = idMap.get(sc.id);
+      if (!dbId) continue;
 
-      const { dbId, foil } = entry;
-      const prices = sc.prices;
+      const p = sc.prices;
+      if (p.usd) rows.push({ collectibleId: dbId, source: "scryfall_tcgplayer", condition: "nm", priceUsd: p.usd, priceNative: null, currency: "USD", listingType: "active", confidence: 0.9 });
+      if (p.usd_foil) rows.push({ collectibleId: dbId, source: "scryfall_tcgplayer", condition: "nm_foil", priceUsd: p.usd_foil, priceNative: null, currency: "USD", listingType: "active", confidence: 0.9 });
+      if (p.usd_etched) rows.push({ collectibleId: dbId, source: "scryfall_tcgplayer", condition: "nm_etched", priceUsd: p.usd_etched, priceNative: null, currency: "USD", listingType: "active", confidence: 0.9 });
+      if (p.eur) rows.push({ collectibleId: dbId, source: "scryfall_cardmarket", condition: "nm", priceUsd: p.eur, priceNative: p.eur, currency: "EUR", listingType: "active", confidence: 0.85 });
+      if (p.eur_foil) rows.push({ collectibleId: dbId, source: "scryfall_cardmarket", condition: "nm_foil", priceUsd: p.eur_foil, priceNative: p.eur_foil, currency: "EUR", listingType: "active", confidence: 0.85 });
+      if (p.tix) rows.push({ collectibleId: dbId, source: "scryfall_mtgo", condition: "digital", priceUsd: p.tix, priceNative: p.tix, currency: "TIX", listingType: "active", confidence: 0.95 });
+    }
 
-      // USD (TCGPlayer market) — regular
-      if (prices.usd) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_tcgplayer",
-          condition: "nm",
-          priceUsd: prices.usd,
-          currency: "USD",
-          listingType: "active",
-          confidence: 0.9,
-        });
-      }
+    // Insert in batches using raw SQL with multiple VALUES
+    let pageInserted = 0;
+    for (let i = 0; i < rows.length; i += SQL_BATCH_SIZE) {
+      const batch = rows.slice(i, i + SQL_BATCH_SIZE);
+      try {
+        const inserted = await insertBatch(sql, batch);
+        pageInserted += inserted;
+        consecutiveErrors = 0;
+      } catch (err: any) {
+        consecutiveErrors++;
+        console.log(`    Insert batch failed (${consecutiveErrors}): ${err.message?.slice(0, 80)}`);
 
-      // USD foil
-      if (prices.usd_foil) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_tcgplayer",
-          condition: "nm_foil",
-          priceUsd: prices.usd_foil,
-          currency: "USD",
-          listingType: "active",
-          confidence: 0.9,
-        });
-      }
-
-      // USD etched
-      if (prices.usd_etched) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_tcgplayer",
-          condition: "nm_etched",
-          priceUsd: prices.usd_etched,
-          currency: "USD",
-          listingType: "active",
-          confidence: 0.9,
-        });
-      }
-
-      // EUR (CardMarket trend)
-      if (prices.eur) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_cardmarket",
-          condition: "nm",
-          priceUsd: prices.eur, // stored as-is; currency field disambiguates
-          priceNative: prices.eur,
-          currency: "EUR",
-          listingType: "active",
-          confidence: 0.85,
-        });
-      }
-
-      // EUR foil
-      if (prices.eur_foil) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_cardmarket",
-          condition: "nm_foil",
-          priceUsd: prices.eur_foil,
-          priceNative: prices.eur_foil,
-          currency: "EUR",
-          listingType: "active",
-          confidence: 0.85,
-        });
-      }
-
-      // MTGO tix
-      if (prices.tix) {
-        priceBatch.push({
-          collectibleId: dbId,
-          source: "scryfall_mtgo",
-          condition: "digital",
-          priceUsd: prices.tix, // tix value, not USD
-          priceNative: prices.tix,
-          currency: "TIX",
-          listingType: "active",
-          confidence: 0.95,
-        });
-      }
-
-      if (priceBatch.length >= BATCH_SIZE) {
-        const inserted = await flushPriceBatch(db, priceBatch);
-        totalPricePoints += inserted;
-        priceBatch = [];
+        if (consecutiveErrors >= 3) {
+          // Wait longer and retry once
+          console.log(`    Waiting 5s before retry...`);
+          await sleep(5000);
+          try {
+            const inserted = await insertBatch(sql, batch);
+            pageInserted += inserted;
+            consecutiveErrors = 0;
+          } catch {
+            console.log(`    Still failing. Resume later with: npm run ingest:prices -- ${pageNum}`);
+            console.log(`    Total so far: ${totalPricePoints + pageInserted} price points`);
+            process.exit(1);
+          }
+        }
       }
     }
 
     totalProcessed += scryfallCards.length;
-    console.log(`  ${totalProcessed} cards processed, ${totalPricePoints} price points so far`);
+    totalPricePoints += pageInserted;
+
+    if (pageNum % 10 === 0 || pageNum < 5) {
+      console.log(`  ${totalProcessed} cards, ${totalPricePoints} prices (page ${pageNum})`);
+    }
 
     nextUrl = pageData.has_more ? pageData.next_page : null;
     pageNum++;
 
-    // Respect Scryfall rate limit
-    await sleep(100);
-  }
-
-  // Flush remaining
-  if (priceBatch.length > 0) {
-    const inserted = await flushPriceBatch(db, priceBatch);
-    totalPricePoints += inserted;
+    // Respect Scryfall rate limit (10 req/sec)
+    await sleep(110);
   }
 
   console.log(`\nDone! Ingested ${totalPricePoints} price points from ${totalProcessed} cards.`);
 }
 
-async function flushPriceBatch(
-  db: ReturnType<typeof drizzle>,
-  batch: Array<typeof pricePoints.$inferInsert>
+async function insertBatch(
+  sql: any,
+  rows: PriceRow[]
 ): Promise<number> {
-  let inserted = 0;
-  for (const row of batch) {
-    try {
-      await db.insert(pricePoints).values(row);
-      inserted++;
-    } catch (err: any) {
-      // Skip on connection errors, log others
-      if (!err.message?.includes("fetch failed")) {
-        console.error(`  Insert error: ${err.message?.slice(0, 100)}`);
-      }
-    }
-  }
-  return inserted;
+  if (rows.length === 0) return 0;
+
+  // Build a multi-row INSERT using tagged template
+  // Neon's tagged template doesn't support dynamic multi-row easily,
+  // so we use a single INSERT per row but wrapped in a transaction-like batch
+  const promises = rows.map((r) =>
+    sql`INSERT INTO price_points (collectible_id, source, condition, price_usd, price_native, currency, listing_type, confidence)
+        VALUES (${r.collectibleId}::uuid, ${r.source}, ${r.condition}, ${r.priceUsd}, ${r.priceNative}, ${r.currency}, ${r.listingType}, ${r.confidence})`
+  );
+
+  // Execute all inserts concurrently (Neon HTTP supports this)
+  await Promise.all(promises);
+  return rows.length;
 }
 
 async function fetchJson(url: string): Promise<any> {
