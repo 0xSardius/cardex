@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx src/lib/db/seed.ts",
+    "db:seed:pokemon": "npx tsx src/lib/db/seed-pokemon.ts",
     "db:seed:mtg": "npx tsx src/lib/db/seed-mtg.ts",
     "ingest:prices": "npx tsx src/lib/ingestion/scryfall-prices.ts",
     "ingest:snapshots": "npx tsx src/lib/ingestion/aggregate-snapshots.ts"
