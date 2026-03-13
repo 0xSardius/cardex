@@ -8,7 +8,7 @@ CardEx is an autonomous market intelligence agent for the collectibles market. I
 
 ## Strategic Vision
 
-The collectibles market ($400B+ globally) is fragmented across dozens of platforms with no unified real-time pricing. CardEx starts with **Pokémon TCG** (well-defined catalog, passionate community, clear data sources) and expands to **Magic: The Gathering** in Phase 2, architected as a generic collectibles pricing engine from day one.
+The collectibles market ($400B+ globally) is fragmented across dozens of platforms with no unified real-time pricing. CardEx leads with **Magic: The Gathering** (largest singles market, highest arbitrage signal density, strong developer community) and is architected as a generic collectibles pricing engine that can expand to Pokémon TCG and other verticals.
 
 The same pipeline (scraping → normalization → x402 serving) works for any card game — and eventually sports cards, sneakers, comics, and other collectibles verticals.
 
@@ -63,10 +63,10 @@ The same pipeline (scraping → normalization → x402 serving) works for any ca
 ## Architecture
 
 - **API-first, agent-first.** Every feature works headlessly via API before it gets a UI.
-- **Agent on Phala/Railway.** The core agent runs as an always-on process on Phala or Railway — serves x402 API endpoints, runs scheduled ingestion, manages reputation. Not serverless.
-- **Site on Vercel.** A separate Next.js frontend for human users to search cards and view prices. Calls the agent's API.
-- **Lucid Agents for commerce.** x402 payment gating, bi-directional payment tracking, and spending controls handled by Lucid Agents middleware — not hand-rolled.
-- **Daydreams for agent logic.** Composable contexts and memory/persistence for sub-agents (price resolver, arbitrage scanner, grading engine).
+- **Agent on Railway.** The core agent runs as an always-on process on Railway — serves x402 API endpoints, runs scheduled ingestion via Railway Cron, manages reputation. Not serverless. No cold starts for agent-to-agent calls.
+- **Site on Vercel.** A separate Next.js frontend for human users to search cards and view prices. Calls the agent's Railway API.
+- **x402 via @x402/next + @x402/svm.** Payment gating handled by Coinbase's x402 SDK directly (not Lucid Agents — their packages bundle bun:sqlite and break Node builds). Payment events tracked in Neon `payment_events` table.
+- **Split deploy confirmed.** Railway for agent (x402 API + cron), Vercel for dashboard (Phase 6). This matches the existing deployment diagram below.
 - **Solana for payments.** USDC micropayments via `@x402/svm`. ~$0.00025/tx, ~400ms finality. Aligns with solenrich (sibling x402 project).
 - **ERC-8004 on Solana.** Agent identity via Metaplex Core NFTs + SATI v2. Onchain reputation (accuracy, uptime, freshness) attached to every response.
 - **Neon for data.** PostgreSQL with pgvector for fuzzy card search. Append-only PricePoints; daily MarketSnapshot aggregations.
@@ -75,13 +75,13 @@ The same pipeline (scraping → normalization → x402 serving) works for any ca
 
 ```
 ┌──────────────────────────────────┐     ┌──────────────────────────┐
-│  Phala / Railway                 │     │  Vercel                  │
+│  Railway                         │     │  Vercel                  │
 │  (always-on agent)               │     │  (human-facing site)     │
 │                                  │     │                          │
 │  x402 API endpoints              │◄────│  Next.js dashboard       │
-│  Daydreams orchestrator          │     │  Search + card detail    │
-│  Scheduled ingestion jobs        │     │  Price charts            │
-│  ERC-8004 reputation updates     │     │                          │
+│  Railway Cron (daily ingestion)  │     │  Search + card detail    │
+│  ERC-8004 reputation updates     │     │  Price charts            │
+│                                  │     │                          │
 └──────────────────────────────────┘     └──────────────────────────┘
          │                │
          ▼                ▼
@@ -196,27 +196,50 @@ Use these skills during development:
 
 ## Phased Roadmap
 
-### Phase 1 — MVP (Pokemon TCG)
+### Phase 1 — DB Foundation (COMPLETE)
 
-1. Seed card database from pokemontcg.io (~19K cards)
-2. TCGPlayer price ingestion pipeline
-3. `POST /api/v1/price` with x402 gating (Lucid Agents + `@x402/svm`)
-4. ERC-8004 agent identity on Solana via `8004-solana` (devnet)
-5. Deploy agent on Phala or Railway
-6. Minimal Next.js site on Vercel (search + card detail + price chart)
+1. ~~Drizzle schema: 9 game-agnostic tables (+ payment_events)~~
+2. ~~Neon DB client + migrations + pg_trgm fuzzy search~~
+3. ~~MTG catalog seeded from Scryfall (90,679 cards, 1,029 sets)~~
+4. ~~Pokemon catalog seeded from GitHub bulk data (20,078 cards, 171 sets)~~
+5. ~~Treatment-aware printing model (foil, showcase, extended art, etc.)~~
 
-### Phase 2 — MTG Expansion
+### Phase 2 — x402 Payment Layer (COMPLETE)
 
-1. Seed MTG catalog from Scryfall bulk download (~86K printings)
-2. Treatment-aware printing model (foil variants, showcase, extended art, etc.)
-3. Card Kingdom buylist pipeline (core MTG finance signal)
-4. MTGO price tracking (leading indicator for paper prices)
-5. Format legality / ban signal tracking
-6. All existing x402 endpoints work for MTG with `game: "mtg"` parameter
+1. ~~x402 resource server via @x402/next + @x402/svm (not Lucid Agents)~~
+2. ~~Solana SVM scheme with USDC devnet/mainnet~~
+3. ~~Next.js 16 proxy.ts for payment gating~~
+4. ~~5 x402-priced routes ($0.001–$0.01)~~
+5. ~~Payment events tracked in Neon payment_events table~~
+
+### Phase 3 — Price API (COMPLETE)
+
+1. ~~Scryfall price ingestion (322K+ price points from 93K cards)~~
+2. ~~Market snapshot aggregation (134K daily snapshots)~~
+3. ~~POST /api/v1/price — exact + fuzzy lookup with real prices~~
+4. ~~POST /api/v1/arbitrage — US/EU price spread detection~~
+5. ~~POST /api/v1/set/complete — missing cards + cost estimator~~
+
+### Phase 4 — Deploy + Agent Registry
+
+1. Deploy agent to Railway (always-on, x402 API + cron)
+2. Railway Cron for daily Scryfall price refresh + snapshot aggregation
+3. Register agent on Solana Agent Registry via `8004-solana-ts`
+4. Attach reputation metadata to API responses
+
+### Phase 5 — Additional Ingestion Sources
+
+1. Card Kingdom buylist pipeline (core MTG finance signal)
+2. MTGO price tracking (leading indicator for paper prices)
+3. JustTCG API integration (real-time TCGPlayer alternative)
+
+### Phase 6 — Dashboard
+
+1. Minimal Next.js site on Vercel (search + card detail + price chart)
+2. Format legality / ban signal display
 
 ### Future Work
 
-- Farcaster MiniApp distribution channel
-- Telegram bot (`/price Charizard base set`, `/price Black Lotus alpha`)
+- Farcaster MiniApp / Telegram bot (`/price Black Lotus alpha`)
 - Sports cards, sneakers, comics verticals (same pipeline)
-- Additional distribution surfaces as demand warrants
+- v2: Dedicated MTG-focused agent with MTG-specific branding
