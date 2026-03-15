@@ -19,12 +19,14 @@
     "ingest:snapshots": "npx tsx src/lib/ingestion/aggregate-snapshots.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.58",
     "@lucid-agents/payments": "^2.5.0",
     "@lucid-agents/wallet": "^0.6.2",
     "@neondatabase/serverless": "^1.0.2",
     "@x402/core": "^2.6.0",
     "@x402/next": "^2.6.0",
     "@x402/svm": "^2.6.0",
+    "ai": "^6.0.116",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "next": "16.1.6",
