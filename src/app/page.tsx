@@ -57,13 +57,15 @@ function StatusBar() {
 function Ticker() {
   const items = [
     { name: "Black Lotus (Alpha)", price: "$285,000", change: "+2.3%" },
-    { name: "Charizard 1st Ed Base", price: "$42,500", change: "-0.8%" },
     { name: "Mox Sapphire (Beta)", price: "$12,800", change: "+1.1%" },
-    { name: "Pikachu Illustrator", price: "$900,000", change: "+0.2%" },
-    { name: "Jace, the Mind Sculptor", price: "$89.99", change: "+4.7%" },
-    { name: "Umbreon VMAX Alt Art", price: "$215.00", change: "+3.1%" },
     { name: "Underground Sea (Rev)", price: "$620.00", change: "-1.2%" },
-    { name: "Moonbraker Promo", price: "$340.00", change: "+6.4%" },
+    { name: "Jace, the Mind Sculptor", price: "$89.99", change: "+4.7%" },
+    { name: "Ragavan, Nimble Pilferer", price: "$62.50", change: "+3.8%" },
+    { name: "The One Ring (Foil)", price: "$185.00", change: "-0.5%" },
+    { name: "Force of Will (Alliances)", price: "$95.00", change: "+1.4%" },
+    { name: "Sheoldred, the Apocalypse", price: "$48.00", change: "+5.2%" },
+    { name: "Cavern of Souls (UMA)", price: "$52.00", change: "-2.1%" },
+    { name: "Wrenn and Six (MH1)", price: "$58.00", change: "+0.9%" },
   ];
 
   const doubled = [...items, ...items];
@@ -113,12 +115,12 @@ function Hero() {
         {/* Headline */}
         <h1 className="animate-fade-up delay-200 font-[family-name:var(--font-geist-sans)] text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
           <span className="text-glow-amber text-[var(--cx-amber)]">Real-time</span>{" "}
-          collectibles market intelligence
+          MTG market intelligence
         </h1>
 
         {/* Subhead */}
         <p className="animate-fade-up delay-300 mt-6 text-lg sm:text-xl text-[var(--cx-text-dim)] max-w-2xl mx-auto leading-relaxed">
-          The Bloomberg Terminal for collectible cards. Aggregated pricing from every major platform, served via pay-per-query micropayments.
+          The Bloomberg Terminal for Magic: The Gathering. Aggregated pricing from TCGPlayer, CardMarket, MTGO, and more — served via pay-per-query micropayments.
         </p>
 
         {/* CTA buttons */}
@@ -151,11 +153,10 @@ function Problem() {
   const platforms = [
     "TCGPlayer",
     "CardMarket",
-    "eBay",
     "Card Kingdom",
-    "MTGO",
+    "MTGO / Cardhoarder",
+    "eBay",
     "Hareruya",
-    "Mercari JP",
   ];
 
   return (
@@ -172,7 +173,7 @@ function Problem() {
               <span className="text-[var(--cx-text-dim)]">Zero unified data.</span>
             </h2>
             <p className="mt-4 text-[var(--cx-text-dim)] leading-relaxed">
-              Card prices are scattered across {platforms.length}+ platforms, each with different update frequencies, currencies, and data formats. Traders manually check 3-5 sites for every transaction. Agents can&apos;t access any of them programmatically.
+              MTG singles prices are scattered across {platforms.length}+ platforms with different currencies, conditions, and foil treatments. Traders manually cross-reference buylist spreads, Reserved List movements, and format ban impacts. No API ties it together.
             </p>
 
             {/* Platform scatter */}
@@ -239,7 +240,7 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/arbitrage",
       price: "$0.005",
-      description: "Cross-platform arbitrage scanner. Detects US/EU price spreads, buylist premiums, and MTGO-to-paper gaps.",
+      description: "Cross-platform arbitrage scanner. Detects TCGPlayer/CardMarket spreads, buylist premiums, MTGO-to-paper gaps, and Reserved List movements.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },
@@ -325,9 +326,9 @@ function Endpoints() {
 /* ─── STATS ─── */
 function Stats() {
   const stats = [
-    { value: "110K+", label: "Cards Indexed", sub: "MTG + Pokemon TCG" },
+    { value: "90K+", label: "Cards Indexed", sub: "Every MTG printing" },
     { value: "322K+", label: "Price Points", sub: "USD, EUR, MTGO Tix" },
-    { value: "1,200", label: "Sets Tracked", sub: "All modern + vintage" },
+    { value: "1,029", label: "Sets Tracked", sub: "Alpha through present" },
     { value: "$0.001", label: "Min Query Cost", sub: "USDC on Solana" },
   ];
 
@@ -364,7 +365,7 @@ function HowItWorks() {
       title: "Send a request",
       desc: "POST to any endpoint with your query. No auth headers — x402 handles payment inline.",
       code: `curl -X POST https://cardex.up.railway.app/api/v1/price \\
-  -d '{"card":"Charizard","game":"pokemon"}'`,
+  -d '{"card":"Ragavan, Nimble Pilferer","game":"mtg"}'`,
     },
     {
       num: "02",
@@ -380,10 +381,11 @@ x402-price: 1000  # $0.001 USDC`,
       title: "Get your data",
       desc: "Resubmit with the signed payment proof. Receive normalized, cross-platform pricing instantly.",
       code: `{
-  "card": "Charizard (Base Set)",
-  "prices": { "usd": 42500, "eur": 39200 },
-  "spread": "+8.4%",
-  "sources": ["tcgplayer","cardmarket"]
+  "card": "Ragavan, Nimble Pilferer (MH2)",
+  "treatment": "regular",
+  "prices": { "usd": 62.50, "eur": 54.80, "tix": 42.1 },
+  "spread": "+14.1%",
+  "sources": ["tcgplayer","cardmarket","mtgo"]
 }`,
     },
   ];
@@ -483,7 +485,7 @@ function Footer() {
           <span>Autonomous Market Intelligence</span>
         </div>
         <div className="flex items-center gap-4">
-          <span>MTG + Pokemon TCG</span>
+          <span>Magic: The Gathering</span>
           <span className="text-[var(--cx-border)]">|</span>
           <span>Powered by x402</span>
         </div>

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CardEx — Real-time Collectibles Market Intelligence",
+  title: "CardEx — Real-time MTG Market Intelligence",
   description:
-    "The Bloomberg Terminal for collectible cards. Aggregated pricing from TCGPlayer, CardMarket, eBay, and more — served via x402 micropayments on Solana.",
+    "The Bloomberg Terminal for Magic: The Gathering. Aggregated pricing from TCGPlayer, CardMarket, Card Kingdom, and MTGO — served via x402 micropayments on Solana.",
 };
 
 export default function RootLayout({

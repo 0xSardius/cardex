@@ -2,7 +2,7 @@
   "name": "cardex",
   "version": "0.1.0",
   "private": true,
-  "description": "Autonomous market intelligence agent for the Pokémon TCG collectibles market",
+  "description": "Autonomous market intelligence agent for Magic: The Gathering",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
