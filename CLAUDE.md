@@ -4,7 +4,7 @@
 
 CardEx is an autonomous market intelligence agent for the collectibles market. It aggregates real-time pricing data from fragmented platforms, detects arbitrage opportunities, and serves structured intelligence via x402 micropayment-gated API endpoints. The agent has a verifiable onchain identity via ERC-8004 on Solana.
 
-**One-liner:** The Bloomberg Terminal for collectible cards, powered by autonomous agents and micropayments.
+**One-liner:** The Bloomberg Terminal for Magic: The Gathering, powered by autonomous agents and micropayments.
 
 ## Strategic Vision
 
@@ -220,26 +220,31 @@ Use these skills during development:
 4. ~~POST /api/v1/arbitrage — US/EU price spread detection~~
 5. ~~POST /api/v1/set/complete — missing cards + cost estimator~~
 
-### Phase 4 — Deploy + Agent Registry
+### Phase 4 — Deploy + Agent Registry (COMPLETE)
 
-1. Deploy agent to Railway (always-on, x402 API + cron)
-2. Railway Cron for daily Scryfall price refresh + snapshot aggregation
-3. Register agent on Solana Agent Registry via `8004-solana-ts`
-4. Attach reputation metadata to API responses
+1. ~~Deploy to Railway via CLI (always-on Next.js, x402 API)~~
+2. ~~Cron API routes for daily price refresh + snapshot aggregation~~
+3. ~~8004-solana SDK integration (register, reputation, identity)~~
+4. ~~Shared agentMeta() with ERC-8004 fields across all routes~~
+5. ~~AGENT_REGISTRY_ASSET env var for onchain identity~~
 
-### Phase 5 — Additional Ingestion Sources
+### Phase 5 — MTG Data Enrichment
 
-1. Card Kingdom buylist pipeline (core MTG finance signal)
-2. MTGO price tracking (leading indicator for paper prices)
-3. JustTCG API integration (real-time TCGPlayer alternative)
+1. Reserved List flag on collectibles table (boolean, high-signal for buyout detection)
+2. Format legality fields (Standard, Modern, Pioneer, Commander, Legacy, Vintage)
+3. Card Kingdom buylist pipeline (core MTG finance signal)
+4. MTGO price tracking depth (Cardhoarder API, leading indicator for paper prices)
 
 ### Phase 6 — Dashboard
 
 1. Minimal Next.js site on Vercel (search + card detail + price chart)
 2. Format legality / ban signal display
+3. Reserved List tracker + buyout alerts
 
 ### Future Work
 
 - Farcaster MiniApp / Telegram bot (`/price Black Lotus alpha`)
+- Format ban/unban event history (track price impact of format changes)
+- Japanese market integration (Hareruya scraping for US/JP arbitrage)
+- Pokemon TCG vertical (architecture supports it, deprioritized for now)
 - Sports cards, sneakers, comics verticals (same pipeline)
-- v2: Dedicated MTG-focused agent with MTG-specific branding
