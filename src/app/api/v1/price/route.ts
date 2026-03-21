@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { collectibles, sets, pricePoints, marketSnapshots } from "@/lib/db/schema";
 import { eq, ilike, desc, and, sql } from "drizzle-orm";
+import { agentMetaSync as agentMeta } from "@/lib/agent-meta";
 import { recordPayment } from "@/lib/x402/payments";
 
 interface PriceRequest {
@@ -216,11 +217,3 @@ function formatCardResult(row: any) {
   };
 }
 
-function agentMeta() {
-  return {
-    name: "CardEx",
-    version: "0.1.0",
-    // ERC-8004 identity will be added in Phase 4
-    solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
-  };
-}

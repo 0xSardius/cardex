@@ -16,6 +16,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateObject } from "ai";
+import { agentMetaSync } from "@/lib/agent-meta";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -209,10 +210,6 @@ Be realistic and conservative — it's better to slightly underestimate than ove
     },
     price: priceData,
     roi: roiAnalysis,
-    agent: {
-      name: "CardEx",
-      version: "0.1.0",
-      solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
-    },
+    agent: agentMetaSync(),
   });
 }

@@ -16,6 +16,7 @@ import { db } from "@/lib/db";
 import { collectibles, sets, pricePoints, marketSnapshots } from "@/lib/db/schema";
 import { eq, ilike, desc, and, sql } from "drizzle-orm";
 import { recordPayment } from "@/lib/x402/payments";
+import { agentMetaSync } from "@/lib/agent-meta";
 
 interface PortfolioCard {
   name: string;
@@ -148,11 +149,7 @@ export async function POST(request: NextRequest) {
       gainLossPct: totalCostBasis > 0 ? Math.round(((totalValue - totalCostBasis) / totalCostBasis) * 10000) / 100 : null,
     },
     valuations,
-    agent: {
-      name: "CardEx",
-      version: "0.1.0",
-      solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
-    },
+    agent: agentMetaSync(),
   });
 }
 

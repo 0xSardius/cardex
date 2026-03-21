@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { collectibles, sets, pricePoints } from "@/lib/db/schema";
 import { eq, and, desc, notInArray } from "drizzle-orm";
 import { recordPayment } from "@/lib/x402/payments";
+import { agentMetaSync } from "@/lib/agent-meta";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -116,10 +117,6 @@ export async function POST(request: NextRequest) {
     cards: cardsWithPrices.sort((a, b) =>
       (a.setNumber ?? "").localeCompare(b.setNumber ?? "", undefined, { numeric: true })
     ),
-    agent: {
-      name: "CardEx",
-      version: "0.1.0",
-      solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
-    },
+    agent: agentMetaSync(),
   });
 }
