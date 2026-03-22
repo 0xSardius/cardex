@@ -230,7 +230,7 @@ Use these skills during development:
 
 ### Phase 5 — MTG Data Enrichment
 
-1. Reserved List flag on collectibles table (boolean, high-signal for buyout detection)
+1. ~~Reserved List flag on collectibles table (571 cards, 734 printings flagged from Scryfall)~~
 2. Format legality fields (Standard, Modern, Pioneer, Commander, Legacy, Vintage)
 3. Card Kingdom buylist pipeline (core MTG finance signal)
 4. MTGO price tracking depth (Cardhoarder API, leading indicator for paper prices)

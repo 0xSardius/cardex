@@ -235,7 +235,7 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/price",
       price: "$0.001",
-      description: "Exact + fuzzy card lookup across all indexed platforms. Returns USD, EUR, MTGO tix with cross-platform spreads.",
+      description: "Exact + fuzzy card lookup across all indexed platforms. Returns USD, EUR, MTGO tix with cross-platform spreads. Reserved List cards flagged automatically.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },
@@ -331,7 +331,7 @@ function Stats() {
   const stats = [
     { value: "90K+", label: "Cards Indexed", sub: "Every MTG printing" },
     { value: "322K+", label: "Price Points", sub: "USD, EUR, MTGO Tix" },
-    { value: "1,029", label: "Sets Tracked", sub: "Alpha through present" },
+    { value: "571", label: "Reserved List", sub: "Supply-locked cards tracked" },
     { value: "$0.001", label: "Min Query Cost", sub: "USDC on Solana" },
   ];
 
