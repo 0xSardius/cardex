@@ -19,6 +19,9 @@ export default function Home() {
       {/* Stats */}
       <Stats />
 
+      {/* Who it's for */}
+      <Audience />
+
       {/* How it works */}
       <HowItWorks />
 
@@ -169,11 +172,11 @@ function Problem() {
               The Problem
             </div>
             <h2 className="font-[family-name:var(--font-geist-sans)] text-3xl font-bold leading-tight">
-              $400B+ market.<br />
-              <span className="text-[var(--cx-text-dim)]">Zero unified data.</span>
+              $800M+ singles market.<br />
+              <span className="text-[var(--cx-text-dim)]">No programmatic access.</span>
             </h2>
             <p className="mt-4 text-[var(--cx-text-dim)] leading-relaxed">
-              MTG singles prices are scattered across {platforms.length}+ platforms with different currencies, conditions, and foil treatments. Traders manually cross-reference buylist spreads, Reserved List movements, and format ban impacts. No API ties it together.
+              TCGPlayer closed their API to new apps. Prices are scattered across {platforms.length}+ platforms with different currencies, conditions, and 1M+ foil treatment SKUs. Traders manually cross-reference buylist spreads and Reserved List movements. Bots can&apos;t access any of it.
             </p>
 
             {/* Platform scatter */}
@@ -200,7 +203,7 @@ function Problem() {
               <span className="text-[var(--cx-amber)]">Every source.</span>
             </h2>
             <p className="mt-4 text-[var(--cx-text-dim)] leading-relaxed">
-              CardEx aggregates all platforms into a single, normalized API. Cross-reference prices instantly. Detect arbitrage in milliseconds. Pay per query with USDC micropayments — as low as $0.001.
+              CardEx aggregates all platforms into one treatment-aware API. Regular, foil, extended art, borderless, showcase — every SKU priced. Detect arbitrage in milliseconds. Pay per query with USDC — as low as $0.001.
             </p>
 
             {/* Mini terminal */}
@@ -349,6 +352,63 @@ function Stats() {
               <div className="mt-0.5 font-[family-name:var(--font-geist-mono)] text-xs text-[var(--cx-text-muted)]">
                 {s.sub}
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── AUDIENCE ─── */
+function Audience() {
+  const audiences = [
+    {
+      label: "MTG Finance Traders",
+      hook: "TCGPlayer closed their API. CardEx is open and cheaper.",
+      icon: "↗",
+    },
+    {
+      label: "Bot & Agent Builders",
+      hook: "Programmatic MTG pricing without scraping. x402 native.",
+      icon: "⚡",
+    },
+    {
+      label: "Store Owners",
+      hook: "Buylist arbitrage alerts across US, EU, and JP markets.",
+      icon: "☰",
+    },
+    {
+      label: "Collectors",
+      hook: "What's my collection worth? $0.002 per card to find out.",
+      icon: "◈",
+    },
+  ];
+
+  return (
+    <section className="border-t border-[var(--cx-border)] py-24 px-4">
+      <div className="mx-auto max-w-5xl">
+        <div className="animate-fade-up mb-3 font-[family-name:var(--font-geist-mono)] text-xs tracking-widest text-[var(--cx-amber)] uppercase">
+          Built For
+        </div>
+        <h2 className="animate-fade-up delay-100 font-[family-name:var(--font-geist-sans)] text-3xl sm:text-4xl font-bold">
+          Humans and agents. <span className="text-[var(--cx-text-dim)]">Same API.</span>
+        </h2>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+          {audiences.map((a, i) => (
+            <div
+              key={a.label}
+              className="animate-fade-up rounded-lg border border-[var(--cx-border)] bg-[var(--cx-surface)]/50 p-5 transition-all hover:border-[var(--cx-border-bright)]"
+              style={{ animationDelay: `${300 + i * 100}ms` }}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded bg-[var(--cx-surface-3)] font-[family-name:var(--font-geist-mono)] text-sm text-[var(--cx-amber)]">
+                  {a.icon}
+                </span>
+                <span className="font-semibold text-[var(--cx-text)]">{a.label}</span>
+              </div>
+              <p className="text-sm text-[var(--cx-text-dim)] leading-relaxed">{a.hook}</p>
             </div>
           ))}
         </div>
