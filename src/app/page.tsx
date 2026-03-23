@@ -235,7 +235,7 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/price",
       price: "$0.001",
-      description: "Exact + fuzzy card lookup across all indexed platforms. Returns USD, EUR, MTGO tix with cross-platform spreads. Reserved List cards flagged automatically.",
+      description: "Exact + fuzzy card lookup across all indexed platforms. Returns USD, EUR, MTGO tix with cross-platform spreads. Reserved List and format legality included.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },

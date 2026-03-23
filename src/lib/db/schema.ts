@@ -71,6 +71,7 @@ export const collectibles = pgTable(
     treatment: varchar("treatment", { length: 50 }), // "regular" | "foil" | "extended_art" | "borderless" | "showcase" | "etched" | "surge" | "galaxy" | "textured"
     foil: boolean("foil").default(false),
     reserved: boolean("reserved").default(false), // MTG Reserved List — supply-constrained, never reprinted
+    legalities: jsonb("legalities"), // MTG format legalities: { standard: "legal"|"not_legal"|"banned"|"restricted", ... }
     // External IDs
     externalId: varchar("external_id", { length: 100 }), // pokemontcg.io id, scryfall id
     tcgplayerId: varchar("tcgplayer_id", { length: 50 }),
