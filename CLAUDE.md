@@ -235,11 +235,13 @@ Use these skills during development:
 3. Card Kingdom buylist pipeline (core MTG finance signal) — **deferred**: requires Playwright + Browserbase scraping (no public API). Consider Option A (Scryfall `purchase_uris` for CK retail links) as a quick win before full scraping. Full pipeline needs headless browser infra + ongoing maintenance.
 4. ~~Cardhoarder MTGO price ingestion (free CSV bulk data, leading indicator for paper prices)~~
 
-### Phase 6 — Dashboard
+### Phase 6 — Dashboard (COMPLETE)
 
-1. Minimal Next.js site on Vercel (search + card detail + price chart)
-2. Format legality / ban signal display
-3. Reserved List tracker + buyout alerts
+1. ~~Search page with fuzzy matching (pg_trgm) + latest prices~~
+2. ~~Card detail page (prices by source, market snapshot, trends, format legality, reserved badge)~~
+3. ~~Arbitrage scanner page (US/EU spread, 15%+ threshold)~~
+4. ~~MTGO-paper spread page (leading indicator + Commander/RL demand)~~
+5. ~~Shared dashboard layout with nav (Search, Arbitrage, MTGO Spread)~~
 
 ### Future Work
 

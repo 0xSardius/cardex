@@ -135,10 +135,10 @@ function Hero() {
             <span className="text-[var(--cx-text-muted)]">$</span> Query the API
           </a>
           <a
-            href="#how-it-works"
+            href="/search"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--cx-border)] bg-transparent px-6 py-3 font-[family-name:var(--font-geist-mono)] text-sm text-[var(--cx-text-dim)] transition-all hover:border-[var(--cx-border-bright)] hover:text-[var(--cx-text)]"
           >
-            How it works
+            Browse Dashboard
           </a>
         </div>
 
