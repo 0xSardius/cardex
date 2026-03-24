@@ -69,6 +69,15 @@ export const routesConfig = {
     },
     description: "Set completion advisor",
   },
+  "POST /api/v1/mtgo-spread": {
+    accepts: {
+      scheme: "exact",
+      payTo: PAY_TO,
+      price: "$0.005",
+      network: NETWORK,
+    },
+    description: "MTGO-to-paper price spread detection (leading indicator)",
+  },
 };
 
 export { resourceServer, NETWORK, PAY_TO };

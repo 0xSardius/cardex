@@ -249,6 +249,14 @@ function Endpoints() {
     },
     {
       method: "POST",
+      path: "/api/v1/mtgo-spread",
+      price: "$0.005",
+      description: "MTGO-to-paper price spread detector. Tix spikes are a leading indicator for paper price increases. Flags both directions.",
+      tag: "LIVE",
+      tagColor: "var(--cx-green)",
+    },
+    {
+      method: "POST",
       path: "/api/v1/set/complete",
       price: "$0.008",
       description: "Set completion advisor. Shows missing cards, estimated cost to complete, and cheapest sources per card.",

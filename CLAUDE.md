@@ -232,8 +232,8 @@ Use these skills during development:
 
 1. ~~Reserved List flag on collectibles table (571 cards, 734 printings flagged from Scryfall)~~
 2. ~~Format legality JSONB (Standard, Modern, Pioneer, Commander, Legacy, Vintage + 15 more formats from Scryfall)~~
-3. Card Kingdom buylist pipeline (core MTG finance signal)
-4. MTGO price tracking depth (Cardhoarder API, leading indicator for paper prices)
+3. Card Kingdom buylist pipeline (core MTG finance signal) — **deferred**: requires Playwright + Browserbase scraping (no public API). Consider Option A (Scryfall `purchase_uris` for CK retail links) as a quick win before full scraping. Full pipeline needs headless browser infra + ongoing maintenance.
+4. ~~Cardhoarder MTGO price ingestion (free CSV bulk data, leading indicator for paper prices)~~
 
 ### Phase 6 — Dashboard
 
