@@ -520,7 +520,7 @@ function CTA() {
             View Endpoints
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/0xSardius/cardex"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--cx-border)] px-8 py-3.5 font-[family-name:var(--font-geist-mono)] text-sm text-[var(--cx-text-dim)] transition-all hover:border-[var(--cx-border-bright)] hover:text-[var(--cx-text)]"
           >
             Documentation
