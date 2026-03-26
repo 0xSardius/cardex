@@ -169,7 +169,13 @@ All endpoints accept a `game` parameter (`pokemon` | `mtg`). Defaults to `pokemo
 
 ## Related Projects
 
-- **solenrich** — Sibling x402 project on Solana. Shared chain + payment infrastructure.
+- **solenrich** — Sibling x402 agent on Solana. Solana data enrichment (wallet profiling, token analysis, whale tracking, risk scoring). Live at [solenrich.vercel.app](https://solenrich.vercel.app). 11 x402 endpoints, MCP integration, 8004-solana registered.
+
+### CardEx × SolEnrich Integration Opportunities
+- **Shared buyer reputation:** CardEx calls SolEnrich `enrich-wallet-light` ($0.002) on payer wallet → behavioral labels, risk scoring for premium data tiers
+- **Agent-to-agent commerce demo:** Agent evaluates MTG portfolio held by Solana wallet → SolEnrich for wallet profile → CardEx for card valuations → combined report. Killer x402 showcase.
+- **Cross-marketing:** Link between sites, both on Solana Agent Registry (8004), same x402 infra, same builder
+- **MCP integration:** Both agents as MCP tools → Claude/Cursor users query cards + wallets in same conversation
 
 ## Claude Code Skills
 
