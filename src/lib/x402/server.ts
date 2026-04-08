@@ -78,6 +78,16 @@ export const routesConfig = {
     },
     description: "MTGO-to-paper price spread detection (leading indicator)",
   },
+  "POST /api/v1/wallet-insight": {
+    accepts: {
+      scheme: "exact",
+      payTo: PAY_TO,
+      price: "$0.005",
+      network: NETWORK,
+    },
+    description:
+      "Wallet intelligence via SolEnrich integration (agent-to-agent x402)",
+  },
 };
 
 export { resourceServer, NETWORK, PAY_TO };

@@ -155,6 +155,7 @@ All endpoints accept a `game` parameter (`pokemon` | `mtg`). Defaults to `pokemo
 | `POST /api/v1/grade` | $0.01 | Vision-based grading estimate |
 | `POST /api/v1/portfolio/value` | $0.002/card | Portfolio valuation |
 | `POST /api/v1/set/complete` | $0.008 | Set completion advisor |
+| `POST /api/v1/wallet-insight` | $0.005 | Wallet intelligence via SolEnrich (agent-to-agent x402) |
 
 ## Development Conventions
 
@@ -171,11 +172,15 @@ All endpoints accept a `game` parameter (`pokemon` | `mtg`). Defaults to `pokemo
 
 - **solenrich** — Sibling x402 agent on Solana. Solana data enrichment (wallet profiling, token analysis, whale tracking, risk scoring). Live at [solenrich.vercel.app](https://solenrich.vercel.app). 11 x402 endpoints, MCP integration, 8004-solana registered.
 
-### CardEx × SolEnrich Integration Opportunities
-- **Shared buyer reputation:** CardEx calls SolEnrich `enrich-wallet-light` ($0.002) on payer wallet → behavioral labels, risk scoring for premium data tiers
-- **Agent-to-agent commerce demo:** Agent evaluates MTG portfolio held by Solana wallet → SolEnrich for wallet profile → CardEx for card valuations → combined report. Killer x402 showcase.
+### CardEx × SolEnrich Integration (Live)
+- **`POST /api/v1/wallet-insight`** — Agent-to-agent commerce via x402. CardEx calls SolEnrich `enrich-wallet-light` ($0.002) and combines with CardEx payment history + portfolio data. Caller pays CardEx $0.005, CardEx pays SolEnrich $0.002.
+- **Implementation:** `src/lib/solenrich/client.ts` (x402 payment client), `src/lib/solenrich/types.ts` (TypeScript types), `src/app/api/v1/wallet-insight/route.ts` (endpoint)
+- **Graceful degradation:** If `SOLANA_PRIVATE_KEY` is not set or SolEnrich is unreachable, endpoint returns CardEx-only data with `solenrich.unavailable: true`.
+
+### Future SolEnrich Integration
 - **Cross-marketing:** Link between sites, both on Solana Agent Registry (8004), same x402 infra, same builder
 - **MCP integration:** Both agents as MCP tools → Claude/Cursor users query cards + wallets in same conversation
+- **Premium tiers:** Use SolEnrich risk scoring to gate access to higher-value data
 
 ## Claude Code Skills
 
