@@ -254,8 +254,16 @@ Use these skills during development:
 4. ~~MTGO-paper spread page (leading indicator + Commander/RL demand)~~
 5. ~~Shared dashboard layout with nav (Search, Arbitrage, MTGO Spread)~~
 
+### Phase 7 — SolEnrich Integration (COMPLETE)
+
+1. ~~x402 payment client for outbound agent-to-agent calls (`@x402/fetch` + `ExactSvmScheme`)~~
+2. ~~POST /api/v1/wallet-insight — SolEnrich enrichment + CardEx payment history + portfolio~~
+3. ~~Graceful degradation when SolEnrich unavailable~~
+4. ~~`@x402/fetch` added as direct dependency~~
+
 ### Future Work
 
+- MPP integration (MCP docs added to `docs/llms-full.txt`)
 - Farcaster MiniApp / Telegram bot (`/price Black Lotus alpha`)
 - Format ban/unban event history (track price impact of format changes)
 - Japanese market integration (Hareruya scraping for US/JP arbitrage)
