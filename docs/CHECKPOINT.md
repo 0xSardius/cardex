@@ -1,64 +1,81 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-04-07
+## Last Session: 2026-04-10
 
 ### What Was Completed
-- **SolEnrich integration (agent-to-agent x402)** — New `POST /api/v1/wallet-insight` endpoint ($0.005). CardEx pays SolEnrich `enrich-wallet-light` ($0.002) via x402, combines with CardEx payment history + portfolio data. Graceful degradation when SolEnrich unavailable.
-  - `src/lib/solenrich/client.ts` — x402 payment client using `@x402/fetch` + `ExactSvmScheme`
-  - `src/lib/solenrich/types.ts` — SolEnrich API types
-  - `src/app/api/v1/wallet-insight/route.ts` — endpoint handler
-  - Added `@x402/fetch` as direct dependency
-- **MCP llms-full.txt** — Added MCP docs to `docs/llms-full.txt` for MPP integration research
+- **Go-live env vars configured on Railway:**
+  - `CRON_SECRET` — generated and set (cron endpoints validate via `?secret=` query param)
+  - `SOLANA_NETWORK=mainnet` — switched from devnet
+  - `SOLANA_RPC_URL` — mainnet RPC (Helius) set
+- **Courtyard.io research** — investigated as autonomous trading platform
+  - ERC-721 NFTs on Ethereum mainnet (migrated from Polygon 2022)
+  - Registry contract: `0xd4ac3CE8e1E14CD60666D49AC34Ff2d2937cF6FA`
+  - Checkout/Minter: `0xaD510490474d835606DB31602AE987a115f298b2`
+  - Physical cards vaulted in Brink's, 1:1 backed NFTs
+  - Covers Pokemon + sports cards, no MTG yet
+  - Buys at 90% FMV (instant liquidity floor)
+  - No official trading API, but standard ERC-721s tradeable via OpenSea/Blur APIs
+- **Autonomous trading agent concept explored** — CardEx as intelligence + execution layer
+  - Arbitrage between tokenized (Courtyard/OpenSea) and paper (TCGPlayer) markets
+  - Would require multi-chain agent (Solana for x402, Ethereum for NFT trading)
+  - Architecture: signal evaluation → risk management → execution → P&L tracking
 
 ### Previous Sessions
-- **MTG-first rebrand** — landing page, metadata, value prop all lead with Magic: The Gathering
-- **Railway deployment** — CardEx live at https://cardex.up.railway.app (CLI deploy, not GitHub auto-deploy)
-- **Phase 4: Deploy + Agent Registry** — cron API routes, 8004-solana SDK, shared agentMeta across all routes
-- **Phase 5.1: Reserved List** — 571 cards (734 printings) flagged from Scryfall, surfaced in API responses
-- **Phase 5.2: Format Legality** — JSONB column, 90,679 cards with 22 formats, 100% coverage
-- **Phase 5.3: MTGO-Paper Spread** — new POST /api/v1/mtgo-spread endpoint detecting tix/paper divergence
-- **Phase 6: Dashboard** — 4 pages (search, card detail, arbitrage, MTGO spread) + shared nav layout
-- **Strategy page** at /strategy — lean canvas comparison for token launch decision
-- **Value prop page** at /value-prop — full product overview for marketing
-- **Landing page polish** — "TCGPlayer closed their API" hook, audience section, documentation link fixed
-- **SolEnrich cross-marketing** — integration opportunities documented in CLAUDE.md
+- **SolEnrich integration** — wallet-insight endpoint, agent-to-agent x402
+- **MCP llms-full.txt** — MPP integration research docs
+- **MTG-first rebrand** — landing page, metadata, value prop
+- **Phase 4-6** — Deploy, Data Enrichment, Dashboard all complete
+- **All 7 phases complete** — DB, x402, Price API, Deploy, Data Enrichment, Dashboard, SolEnrich
 
 ### Current State
-- **All 6 phases complete** + SolEnrich integration — DB, x402, Price API, Deploy, Data Enrichment, Dashboard
-- **8 x402-gated API endpoints** (added wallet-insight) + 2 cron endpoints
-- **55/55 tests passing** (Reserved List 19, Legality 25, MTGO Spread 11)
-- **Railway deploy** needs `railway up` for each update (no GitHub auto-deploy)
-- **Dashboard pages** deployed but Railway may need a fresh `railway up` to pick up latest commits
-- **Price data** is from March — needs a cron run to refresh
-- **SolEnrich integration** needs `SOLANA_PRIVATE_KEY` on Railway for outbound x402 payments
+- **All 7 phases complete** + SolEnrich integration
+- **8 x402-gated API endpoints** + 2 cron endpoints + 4 dashboard pages
+- **55/55 tests passing**
+- **Railway deploy** at https://cardex.up.railway.app
+- **Mainnet-ready** — `SOLANA_NETWORK=mainnet`, `SOLANA_RPC_URL`, `CRON_SECRET` set on Railway
+- **Still needs:** `SOLANA_PAY_TO_ADDRESS`, `SOLANA_PRIVATE_KEY` on Railway (agent wallet not yet created)
+- **Latest code not deployed** — needs `railway up` after wallet setup
 
 ### Go-Live Checklist
-1. **Set `CRON_SECRET` on Railway** — enable daily price refresh
-2. **Run cron endpoint once** — refresh price data (stale since March)
-3. **Verify `SOLANA_PAY_TO_ADDRESS` on Railway** — needed for x402 to accept payments
-4. **Set `SOLANA_PRIVATE_KEY` on Railway** — needed for wallet-insight (outbound x402 to SolEnrich) and agent registration (8004)
-5. **Test end-to-end x402 payment** — confirm a real payment goes through
-6. **`railway up`** — deploy latest code (SolEnrich integration + MCP docs)
-7. **Agent registration on Solana (8004)** — register, set `AGENT_REGISTRY_ASSET`
+1. ~~Set `CRON_SECRET` on Railway~~ DONE
+2. ~~Set `SOLANA_NETWORK=mainnet` on Railway~~ DONE
+3. ~~Set `SOLANA_RPC_URL` (mainnet Helius) on Railway~~ DONE
+4. **Create dedicated agent wallet** — new Phantom account, export private key, store in password manager
+5. **Set `SOLANA_PAY_TO_ADDRESS` on Railway** — main Phantom wallet (revenue destination)
+6. **Set `SOLANA_PRIVATE_KEY` on Railway** — agent wallet (for outbound x402 + registration)
+7. **Fund agent wallet** — ~0.02 SOL for fees + small USDC for SolEnrich calls
+8. **`railway up`** — deploy latest code
+9. **Run price ingestion cron** — `GET /api/cron/ingest-prices?secret=<CRON_SECRET>` (~5 min)
+10. **Run snapshot aggregation** — `GET /api/cron/aggregate-snapshots?secret=<CRON_SECRET>`
+11. **Test end-to-end x402 payment** — confirm mainnet payment flow
+12. **Agent registration on Solana (8004)** — register, set `AGENT_REGISTRY_ASSET`
 
 ### Post-Launch
 - **Post on r/mtgfinance** — first marketing push
-- **Set up GitHub auto-deploy on Railway** — or keep using `railway up`
 - **Custom domain** — cardex.gg or similar
-- **MPP integration** — explore using llms-full.txt docs
+- **MPP integration** — llms-full.txt docs ready
+- **GitHub auto-deploy on Railway** — or keep using `railway up`
+
+### Future: Autonomous Trading Agent
+- **Concept:** CardEx uses its own arbitrage signals to buy/sell tokenized cards
+- **Platform:** Courtyard.io (ERC-721 on Ethereum) via OpenSea/Blur APIs
+- **Architecture:** signal evaluation → risk controls → execution → P&L
+- **Multi-chain:** Solana (x402 payments) + Ethereum (NFT trading)
+- **Open questions:** capital allocation, liquidity depth, spread profitability after fees (~2.5% marketplace + gas)
+- **Next research:** Check OpenSea API for current Courtyard listings and typical spreads
+- **Revenue model shift:** data sales (x402) + trading profits (arbitrage)
 
 ### Blockers
-- **Price data staleness** — last Scryfall ingestion was March. Must run cron before public launch.
-- **Railway env vars unverified** — `SOLANA_PAY_TO_ADDRESS`, `SOLANA_PRIVATE_KEY`, `CRON_SECRET` may not be set
-- **Railway deploys are manual** — `railway up` required, no GitHub integration set up
+- **Agent wallet not created yet** — user needs to create in Phantom, export key, set on Railway (must be done outside Claude for security)
+- **Price data stale** — last Scryfall ingestion was March. Must run cron after deploy.
+- **Railway deploys are manual** — `railway up` required, no GitHub integration
 
 ### Key Decisions Made
-- **MTG-first strategy** — Pokemon deprioritized. MTG has better data (Scryfall), bigger market ($800M+), no competitors in x402 space
-- **No token for CardEx** — would dilute SolEnrich token. CardEx is a product play, SolEnrich gets the token.
-- **Single Railway deploy** — no Vercel split. Simpler for now, add Vercel later if needed.
-- **Card Kingdom buylist deferred** — requires Playwright + Browserbase scraping. Not worth the complexity yet.
-- **JSONB for legalities** — flexible, matches Scryfall format, no migration when new formats are added
-- **Cardhoarder CSV skipped** — pivoted to MTGO-paper spread detection using existing Scryfall tix data instead
+- **Dedicated agent wallet** — separate from personal wallet for security isolation. Minimally funded, disposable.
+- **Wallet architecture:** Main Phantom (revenue) + Agent wallet (signing) + Hardware wallet (cold storage, later)
+- **Private key format:** Code accepts both JSON byte array and base58 string
+- **Courtyard.io is the best autonomous trading target** — tokenized cards eliminate physical logistics, standard ERC-721s are programmatically tradeable
+- **Multi-chain agent confirmed** — Solana for x402/identity, Ethereum for NFT trading
 
 ## Roadmap
 - [x] Phase 1: DB Foundation
@@ -67,3 +84,6 @@
 - [x] Phase 4: Deploy + Agent Registry
 - [x] Phase 5: MTG Data Enrichment
 - [x] Phase 6: Dashboard
+- [x] Phase 7: SolEnrich Integration
+- [ ] Go-Live: Agent wallet + deploy + data refresh + e2e test
+- [ ] Phase 8: Autonomous Trading Agent (Courtyard.io / OpenSea integration)
