@@ -8,7 +8,7 @@ import { registerExactSvmScheme } from "@x402/svm/exact/server";
 import { SOLANA_DEVNET_CAIP2, SOLANA_MAINNET_CAIP2 } from "@x402/svm";
 
 // Payment destination — your Solana wallet that receives USDC
-const PAY_TO = process.env.SOLANA_PAY_TO_ADDRESS!;
+const PAY_TO = process.env.SOLANA_WALLET_ADDRESS!;
 
 // Use devnet by default, mainnet in production
 type Network = `${string}:${string}`;

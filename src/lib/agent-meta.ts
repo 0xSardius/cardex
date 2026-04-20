@@ -14,7 +14,7 @@ export async function agentMeta() {
     name: "CardEx",
     version: "0.1.0",
     description: "MTG market intelligence agent",
-    solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
+    solanaAddress: process.env.SOLANA_WALLET_ADDRESS ?? null,
     registryAsset: process.env.AGENT_REGISTRY_ASSET ?? null,
     reputation: null as any,
   };
@@ -54,7 +54,7 @@ export function agentMetaSync() {
     name: "CardEx",
     version: "0.1.0",
     description: "MTG market intelligence agent",
-    solanaAddress: process.env.SOLANA_PAY_TO_ADDRESS ?? null,
+    solanaAddress: process.env.SOLANA_WALLET_ADDRESS ?? null,
     registryAsset: process.env.AGENT_REGISTRY_ASSET ?? null,
   };
 }
