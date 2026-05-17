@@ -2,22 +2,34 @@
 
 ## What is this?
 
-CardEx is an autonomous market intelligence agent for the collectibles market. It aggregates real-time pricing data from fragmented platforms, detects arbitrage opportunities, and serves structured intelligence via x402 micropayment-gated API endpoints. The agent has a verifiable onchain identity via ERC-8004 on Solana.
+CardEx is a Solana-native pricing oracle for tokenized collectibles. It serves **autonomous trading agents** that arbitrage tokenized cards (Collector Crypt, Phygitals, Magic Eden pNFTs) against the paper market (Scryfall, MTGO, Cardhoarder, eBay/TCGPlayer). Every query is paid per-call via x402 in USDC on Solana. The agent has a verifiable onchain identity via ERC-8004 on Solana.
 
-**One-liner:** The Bloomberg Terminal for Magic: The Gathering, powered by autonomous agents and micropayments.
+**One-liner:** The price oracle that tokenized-card trading agents use — paper-market truth + onchain marketplace state, served per-query via x402 on Solana.
 
 ## Strategic Vision
 
-The collectibles market ($400B+ globally) is fragmented across dozens of platforms with no unified real-time pricing. CardEx leads with **Magic: The Gathering** (largest singles market, highest arbitrage signal density, strong developer community) and is architected as a generic collectibles pricing engine that can expand to Pokémon TCG and other verticals.
+The tokenized collectibles market is one of the most successful onchain RWA categories — $124.5M/mo across Collector Crypt + Phygitals (Aug 2025) and growing. The same physical Charizard now lives on multiple chains, listed on multiple marketplaces, with prices that diverge constantly. **Trading bots need a neutral oracle that knows both the onchain and paper sides.** No platform can credibly build it because they're all conflicted.
 
-The same pipeline (scraping → normalization → x402 serving) works for any card game — and eventually sports cards, sneakers, comics, and other collectibles verticals.
+CardEx is that oracle. Solana-native, x402-gated, agent-first.
 
-### Why multi-game from the start
+### Why this positioning
 
-- **Shared infrastructure.** TCGPlayer, eBay, CardMarket integrations are game-agnostic. x402 layer, agent identity, and DB infra are 100% reusable.
-- **MTG adds ~60-100% API revenue** for ~35-45% incremental effort over Pokemon-only.
-- **MTG has a larger singles market** ($800M+ annual) with higher arbitrage signal density and a developer community ready to pay (r/mtgfinance 200K+, MTGStocks premium, TCGPlayer API closed to new apps).
-- **Pokemon wins on grading** (dominant grading market, grading ROI calculator is a killer feature). MTG wins on arbitrage (Reserved List buyouts, format ban/unban cycles, US/EU spreads).
+- **The buyer pays per-query.** Trading bots scanning 10K Magic Eden / Collector Crypt listings/day at $0.001 each ≈ $300/mo per bot. That matches x402 economics. Human collectors and lending protocols don't pay that way.
+- **The moat is offchain depth.** Collector Crypt knows what's listed *on Collector Crypt*. It doesn't know what the same card trades for on Cardhoarder, what the MTGO spread implies, or what eBay sold yesterday. CardEx does — and that's unreproducible without the catalog + ingestion work already done.
+- **The chain matches the user.** 49% of x402 transactions are on Solana, 77% of AI agent volume is on Solana, and the largest tokenized-card platforms (Collector Crypt, Phygitals) are Solana-native. Bots live where their assets live.
+- **Two surfaces, same data.** Same endpoints serve agents (primary, paid) and humans (dashboard demo, free tier). The dashboard exists to prove the API works, not as the product.
+
+### Who CardEx is *not* for
+
+- Lending protocols wanting a Pyth-style push feed (different sales motion, different SLA — revisit when there are ≥10 paying bot users)
+- Human collectors browsing prices (they're the demo audience, not the customer)
+- Pure digital NFT pricing (NBA Top Shot, Candy Digital — out of scope)
+
+### Game priority
+
+- **Pokemon first** for the agentic-commerce wedge — it's the only game with meaningful tokenized volume ($124.5M/mo). All RWA arbitrage opportunity is here.
+- **MTG offchain remains the moat** — Scryfall + Cardhoarder + (future) eBay/TCGPlayer give CardEx the only cross-game offchain pricing depth on Solana. When MTG tokenization eventually arrives (WotC is currently hostile), CardEx is already positioned.
+- **No cross-chain in Phase 8.** Polygon (Courtyard), Base (Slab.fun), BNB, Flow are real but deferred — bots live on Solana, and one paying bot user beats five chains of speculative coverage.
 
 ### Game-specific data sources
 
@@ -144,18 +156,28 @@ All models are **game-agnostic** — a `game` field (e.g. `pokemon`, `mtg`) scop
 
 MTG has ~86K unique printings (vs Pokemon's ~19K) and 1M+ SKUs when counting foil treatments (regular, foil, extended art, borderless, showcase, etched, surge, galaxy, textured). The data model must be **treatment-aware** — a `Printing` sub-entity links a card name to a specific set + treatment + foil status, each with independent pricing.
 
-## API Endpoints (x402-gated via Lucid Agents)
+## API Endpoints (x402-gated)
 
-All endpoints accept a `game` parameter (`pokemon` | `mtg`). Defaults to `pokemon` in Phase 1.
+All endpoints accept a `game` parameter (`pokemon` | `mtg`).
+
+**Live (paper-market):**
 
 | Endpoint | Price | Description |
 |---|---|---|
 | `POST /api/v1/price` | $0.001 | Single card price lookup |
-| `POST /api/v1/arbitrage` | $0.005 | Cross-platform arbitrage scan |
+| `POST /api/v1/arbitrage` | $0.005 | Cross-platform arbitrage scan (US/EU paper spread) |
 | `POST /api/v1/grade` | $0.01 | Vision-based grading estimate |
 | `POST /api/v1/portfolio/value` | $0.002/card | Portfolio valuation |
 | `POST /api/v1/set/complete` | $0.008 | Set completion advisor |
 | `POST /api/v1/wallet-insight` | $0.005 | Wallet intelligence via SolEnrich (agent-to-agent x402) |
+
+**Planned (Phase 8 — tokenized RWA, bot-facing):**
+
+| Endpoint | Price | Description |
+|---|---|---|
+| `POST /api/v1/rwa-fair-value` | $0.002 | Paper-vs-pNFT fair value for a single mint or listing |
+| `POST /api/v1/rwa-arbitrage` | $0.005 | Scan onchain listings under paper market by ≥X% |
+| `POST /api/v1/rwa-fair-value/batch` | $0.0015/mint | Batch fair-value for up to 50 mints/call (volume discount) |
 
 ## Development Conventions
 
@@ -165,22 +187,38 @@ All endpoints accept a `game` parameter (`pokemon` | `mtg`). Defaults to `pokemo
 - Environment variables prefixed: `DATABASE_`, `UPSTASH_`, `SOLANA_`, `ANTHROPIC_`
 - Price values stored as decimals in USD; native currency + conversion rate preserved
 - All timestamps in UTC ISO 8601
-- x402 payment verification via Lucid Agents middleware, not custom code
+- x402 payment verification via `@x402/next` + `@x402/svm` (Lucid Agents bundles `bun:sqlite`, do not use)
 - Solana wallet keypair stored securely; never committed to repo
 
 ## Related Projects
 
-- **solenrich** — Sibling x402 agent on Solana. Solana data enrichment (wallet profiling, token analysis, whale tracking, risk scoring). Live at [solenrich.vercel.app](https://solenrich.vercel.app). 11 x402 endpoints, MCP integration, 8004-solana registered.
+- **solenrich** — Sibling x402 agent on Solana. Solana data enrichment (wallet profiling, token analysis, whale tracking, risk scoring, DeFi positions, alerts, smart-money flow). Live at [solenrich.com](https://solenrich.com). **25 x402 endpoints** (as of 2026-05), MCP server shipped for Claude Desktop + Cursor, 8004-solana registered. Same builder as CardEx — these are the "two halves of a Solana intelligence stack for trading agents."
 
 ### CardEx × SolEnrich Integration (Live)
-- **`POST /api/v1/wallet-insight`** — Agent-to-agent commerce via x402. CardEx calls SolEnrich `enrich-wallet-light` ($0.002) and combines with CardEx payment history + portfolio data. Caller pays CardEx $0.005, CardEx pays SolEnrich $0.002.
+- **`POST /api/v1/wallet-insight`** — Demo of agent-to-agent commerce via x402. CardEx calls SolEnrich `enrich-wallet-light` ($0.002) and combines with CardEx payment history + portfolio data. Caller pays CardEx $0.005, CardEx pays SolEnrich $0.002.
 - **Implementation:** `src/lib/solenrich/client.ts` (x402 payment client), `src/lib/solenrich/types.ts` (TypeScript types), `src/app/api/v1/wallet-insight/route.ts` (endpoint)
-- **Graceful degradation:** If `SOLANA_PRIVATE_KEY` is not set or SolEnrich is unreachable, endpoint returns CardEx-only data with `solenrich.unavailable: true`.
+- **Graceful degradation pattern:** If `SOLANA_PRIVATE_KEY` is not set or SolEnrich is unreachable, endpoint returns CardEx-only data with `solenrich.unavailable: true`. **Reuse this pattern for all future SolEnrich integrations** — CardEx SLA must not depend on SolEnrich uptime.
 
-### Future SolEnrich Integration
-- **Cross-marketing:** Link between sites, both on Solana Agent Registry (8004), same x402 infra, same builder
-- **MCP integration:** Both agents as MCP tools → Claude/Cursor users query cards + wallets in same conversation
-- **Premium tiers:** Use SolEnrich risk scoring to gate access to higher-value data
+### Phase 8 SolEnrich Integration (Load-Bearing, Required)
+The agentic-commerce wedge depends on composing SolEnrich into the RWA oracle responses. These are **not** optional integrations — they're the differentiated value vs. Magic Eden's raw API.
+
+- **`rwa-arbitrage` enrichment** — Each opportunity carries `seller_risk` (SolEnrich `due-diligence`, $0.02) and `seller_cluster` (SolEnrich `wallet-graph`, $0.01). Wash-trade clusters are filtered out by default.
+- **`seller_intel` cache table** — 6h TTL on seller wallet enrichment. Same seller across 50 listings = 1 SolEnrich call. This caching is the margin lever; without it, the endpoint loses money per call.
+- **Extended client** — `src/lib/solenrich/client.ts` gains `dueDiligence(address)` and `walletGraph(address)` wrappers mirroring `enrichWalletLight()`.
+
+See `docs/PHASE-8-PLAN.md` Step 4 for full integration spec.
+
+### On-Demand SolEnrich Composition (Build When Asked)
+These are speculative — build only if a Phase 8 design-partner bot specifically requests them. Don't add to roadmap until validated.
+
+- **`POST /api/v1/listing-due-diligence`** ($0.03-0.04) — Single-call bundle: CardEx fair-value + SolEnrich `due-diligence` + `wallet-graph`. Convenience pitch, tight margin, demand unproven.
+- **`/api/v1/feed-latest`** — Mirror of SolEnrich's daily brief, scoped to tokenized cards.
+- **Natural-language briefing output format** — Mirror SolEnrich's JSON / briefing / hybrid response modes. Only add when there's a non-bot consumer (LLM agent in Claude/Cursor).
+
+### Cross-Marketing & Discovery
+- Both on Solana Agent Registry (8004), same x402 infra, same builder — narratively coherent stack
+- Both available as MCP servers → Claude Desktop / Cursor users can query "what tokenized Pokemon does this wallet hold + is the seller safe" in one conversation
+- Mutual link in landing pages: SolEnrich for wallet/token intel, CardEx for collectibles intel
 
 ## Claude Code Skills
 
@@ -261,11 +299,42 @@ Use these skills during development:
 3. ~~Graceful degradation when SolEnrich unavailable~~
 4. ~~`@x402/fetch` added as direct dependency~~
 
+### Phase 8 — Tokenized RWA Oracle (the agentic-commerce wedge)
+
+**Goal:** Stand up the paper-vs-onchain pricing surface that trading bots actually pay for. Solana-only — Collector Crypt + Phygitals + Magic Eden pNFT listings. Defer all cross-chain work.
+
+**Detailed plan:** see `docs/PHASE-8-PLAN.md`.
+
+**Build order:**
+1. Recon — read Collector Crypt + Phygitals programs, decide whether to index marketplace events directly or use Magic Eden's API as the read surface
+2. Pokemon paper-price ingestion (PriceCharting API as primary candidate — pokemontcg.io's tcgplayer field as fallback)
+3. Onchain listings ingestion adapter — `src/lib/ingestion/collector-crypt.ts`, `src/lib/ingestion/phygitals.ts`, `src/lib/ingestion/magic-eden.ts`
+4. Listings table + freshness scoring in DB schema
+5. `POST /api/v1/rwa-fair-value` — input: mint or listing URL → paper-market price, onchain ask, spread %, freshness, grading distribution
+6. `POST /api/v1/rwa-arbitrage` — scan all active onchain listings under paper market by ≥X%, sorted by net profit after fees
+7. Bot-friendly affordances — stable response shape, ETag/freshness headers, batch endpoint
+8. Design-partner outreach — one named bot user before scaling. Targets: Magic Eden floor-sniping bots, Collector Crypt arbitrage bots in Solana trading Discords
+
+**Out of scope for Phase 8:**
+- Cross-chain (Polygon Courtyard, Base Slab.fun, BNB, Flow) — defer to Phase 10
+- Pyth-style push feed for lending protocols — revisit at ≥10 paying bot users
+- Dashboard rebuild — current dashboard is fine as demo; new endpoints get bot-targeted docs instead
+
+### Phase 9 — Eat Our Own Dogfood (Autonomous Trading)
+
+**Concept:** CardEx consumes its own `rwa-arbitrage` signals to buy/sell tokenized Pokemon on Solana. Acts as proof-of-quality for the oracle pitch ("we trade on our own numbers") and adds a second revenue stream.
+
+- **Platform:** Collector Crypt + Magic Eden pNFTs (Solana)
+- **Architecture:** Signal (CardEx) → Wallet risk (SolEnrich) → Evaluation → Execution (Magic Eden REST + Tensor)
+- **Arbitrage vectors:** RWA underpriced vs paper, paper/RWA spread on redemption, cross-platform onchain
+- **Execution APIs:** Magic Eden REST (120 QPM), Tensor GraphQL/AMM pools
+- **Revenue model:** x402 oracle fees (Phase 8) + trading P&L (Phase 9)
+- **Gating decision:** only start if Phase 8 has ≥1 paying agent user and arbitrage signals show consistent post-fee margin in backtest
+
 ### Future Work
 
 - MPP integration (MCP docs added to `docs/llms-full.txt`)
 - Farcaster MiniApp / Telegram bot (`/price Black Lotus alpha`)
 - Format ban/unban event history (track price impact of format changes)
 - Japanese market integration (Hareruya scraping for US/JP arbitrage)
-- Pokemon TCG vertical (architecture supports it, deprioritized for now)
 - Sports cards, sneakers, comics verticals (same pipeline)

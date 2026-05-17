@@ -1,24 +1,57 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-04-10
+## Last Session: 2026-05-16
+
+### Positioning Sharpened — Agentic-Commerce Wedge
+
+CardEx is repositioned **before launch** as a Solana-native pricing oracle for **tokenized-card trading agents** — not a Bloomberg-for-MTG product for human collectors. Drove the decision: the only buyer that actually pays per-query (x402's natural economics) is a programmatic bot scanning thousands of listings. Lending protocols want push feeds (different sales motion); humans don't pay per call. Bots do.
+
+**Sharpened one-liner:** "The price oracle that tokenized-card trading agents use — paper-market truth + onchain marketplace state, served per-query via x402 on Solana."
+
+**Key consequences:**
+- **Pokemon first** for the wedge (only game with meaningful tokenization — $124.5M/mo on Collector Crypt + Phygitals). MTG offchain stays as the moat (no one else has cross-game offchain depth on Solana).
+- **No cross-chain in Phase 8.** Polygon (Courtyard), Base (Slab.fun), BNB, Flow are deferred. Bots live on Solana; one paying bot user beats five chains of speculative coverage.
+- **No lending-protocol pitch yet.** Revisit Pyth-style feeds at ≥10 paying bot users.
+- **Dashboard becomes a demo,** not the product. Phase 8 ships bot-targeted docs/SDK examples instead of new dashboard pages.
+
+**Phase 8 redefined** as "Tokenized RWA Oracle" — see `docs/PHASE-8-PLAN.md`. **Phase 9 stays** as autonomous trading (now framed as dogfood / proof-of-quality, not core revenue).
+
+CLAUDE.md rewritten to match. API endpoints table now distinguishes Live (paper-market) vs Planned (RWA, bot-facing).
+
+### Update (2026-05-17) — SolEnrich Composition Baked Into Phase 8
+
+Checked SolEnrich's current scope: grew from 11 → 25 endpoints, shipped MCP server, lives at solenrich.com (not the old vercel.app subdomain). Several new endpoints fit Phase 8 directly.
+
+**Decided:** SolEnrich `due-diligence` ($0.02) + `wallet-graph` ($0.01) become **load-bearing** in `rwa-arbitrage`, not optional. Each opportunity carries `seller_risk` + `seller_cluster`; wash-trade clusters filtered by default. 6h cache on a new `seller_intel` table is the margin lever — without it the endpoint loses money per call.
+
+**Deferred to on-demand:** bundled `listing-due-diligence` endpoint, `feed-latest` mirror, briefing-format output, webhook variant. All speculative; build only if a specific Phase 8 design-partner bot requests them.
+
+**Updated files:** `docs/PHASE-8-PLAN.md` (Step 4 rewritten with SolEnrich spec + cost math; Step 5 split Required vs On-demand; risks gained 2 SolEnrich rows; timeline moved outreach to Week 1). `CLAUDE.md` Related Projects section split into Live / Phase 8 Load-Bearing / On-Demand tiers. New memory: `reference_solenrich_endpoints.md`.
+
+**Honest caveat logged:** integration polish doesn't validate demand. Step 6 outreach (finding one paying bot user) is still the gate. Don't let SolEnrich work delay the first outreach post.
+
+---
+
+## Previous Session: 2026-04-13
 
 ### What Was Completed
-- **Go-live env vars configured on Railway:**
-  - `CRON_SECRET` — generated and set (cron endpoints validate via `?secret=` query param)
-  - `SOLANA_NETWORK=mainnet` — switched from devnet
-  - `SOLANA_RPC_URL` — mainnet RPC (Helius) set
-- **Courtyard.io research** — investigated as autonomous trading platform
-  - ERC-721 NFTs on Ethereum mainnet (migrated from Polygon 2022)
-  - Registry contract: `0xd4ac3CE8e1E14CD60666D49AC34Ff2d2937cF6FA`
-  - Checkout/Minter: `0xaD510490474d835606DB31602AE987a115f298b2`
-  - Physical cards vaulted in Brink's, 1:1 backed NFTs
-  - Covers Pokemon + sports cards, no MTG yet
-  - Buys at 90% FMV (instant liquidity floor)
-  - No official trading API, but standard ERC-721s tradeable via OpenSea/Blur APIs
-- **Autonomous trading agent concept explored** — CardEx as intelligence + execution layer
-  - Arbitrage between tokenized (Courtyard/OpenSea) and paper (TCGPlayer) markets
-  - Would require multi-chain agent (Solana for x402, Ethereum for NFT trading)
-  - Architecture: signal evaluation → risk management → execution → P&L tracking
+- **Deep RWA collectibles research** — corrected chain assumptions, identified Solana-native targets
+  - **Courtyard.io is on Polygon** (NOT Ethereum — migrated from ETH to Polygon Aug 2023). No Solana plans.
+  - Polygon Registry: `0x251be3a17af4892035c37ebf5890f4a4d889dcad`. $78.4M/mo volume. $30M Series A.
+  - **Collector Crypt identified as primary target** — Solana-native pNFTs, $44M/mo volume, tradeable on Magic Eden + Tensor
+  - **Phygitals** — smaller Solana competitor, $17.4M total volume, 60K+ tokenized cards
+  - **Total tokenized Pokemon market: $124.5M/month** (Aug 2025), 5.5x growth from Jan 2025
+- **Solana RWA ecosystem mapped:**
+  - $873M tokenized RWAs on Solana (Dec 2025 ATH), projected $2B by 2026
+  - BlackRock BUIDL ($2.9B), Franklin FOBXX ($594M) live on Solana
+  - Token Extensions, Metaplex Core, Firedancer (600K TPS) as infrastructure
+  - Solana processes 77% of AI agent transaction volume
+- **Autonomous trading agent concept pivoted to Solana-native:**
+  - Collector Crypt (Solana) replaces Courtyard (Polygon) as trading target
+  - Magic Eden API (REST, 120 QPM) + Tensor SDK (GraphQL, AMM pools) for execution
+  - Three arbitrage vectors: RWA underpriced, paper/RWA spread, cross-platform
+  - CardEx (pricing intelligence) + SolEnrich (wallet profiling) + execution = full loop
+  - No MTG tokenization anywhere — WotC hostile. Trading agent would be Pokemon-focused.
 
 ### Previous Sessions
 - **SolEnrich integration** — wallet-insight endpoint, agent-to-agent x402
@@ -33,7 +66,7 @@
 - **55/55 tests passing**
 - **Railway deploy** at https://cardex.up.railway.app
 - **Mainnet-ready** — `SOLANA_NETWORK=mainnet`, `SOLANA_RPC_URL`, `CRON_SECRET` set on Railway
-- **Still needs:** `SOLANA_PAY_TO_ADDRESS`, `SOLANA_PRIVATE_KEY` on Railway (agent wallet not yet created)
+- **Still needs:** `SOLANA_WALLET_ADDRESS`, `SOLANA_PRIVATE_KEY` on Railway (agent wallet not yet created)
 - **Latest code not deployed** — needs `railway up` after wallet setup
 
 ### Go-Live Checklist
@@ -41,7 +74,7 @@
 2. ~~Set `SOLANA_NETWORK=mainnet` on Railway~~ DONE
 3. ~~Set `SOLANA_RPC_URL` (mainnet Helius) on Railway~~ DONE
 4. **Create dedicated agent wallet** — new Phantom account, export private key, store in password manager
-5. **Set `SOLANA_PAY_TO_ADDRESS` on Railway** — main Phantom wallet (revenue destination)
+5. **Set `SOLANA_WALLET_ADDRESS` on Railway** — main Phantom wallet (revenue destination)
 6. **Set `SOLANA_PRIVATE_KEY` on Railway** — agent wallet (for outbound x402 + registration)
 7. **Fund agent wallet** — ~0.02 SOL for fees + small USDC for SolEnrich calls
 8. **`railway up`** — deploy latest code
@@ -56,14 +89,22 @@
 - **MPP integration** — llms-full.txt docs ready
 - **GitHub auto-deploy on Railway** — or keep using `railway up`
 
-### Future: Autonomous Trading Agent
-- **Concept:** CardEx uses its own arbitrage signals to buy/sell tokenized cards
-- **Platform:** Courtyard.io (ERC-721 on Ethereum) via OpenSea/Blur APIs
-- **Architecture:** signal evaluation → risk controls → execution → P&L
-- **Multi-chain:** Solana (x402 payments) + Ethereum (NFT trading)
-- **Open questions:** capital allocation, liquidity depth, spread profitability after fees (~2.5% marketplace + gas)
-- **Next research:** Check OpenSea API for current Courtyard listings and typical spreads
-- **Revenue model shift:** data sales (x402) + trading profits (arbitrage)
+### Phase 8: Autonomous Trading Agent (Solana-Native)
+- **Concept:** CardEx uses its own arbitrage signals to buy/sell tokenized Pokemon cards on Solana
+- **Platform:** Collector Crypt (Solana pNFTs) via Magic Eden API + Tensor SDK
+- **Architecture:** Signal detection (CardEx) → Wallet profiling (SolEnrich) → Evaluation → Execution
+- **Single-chain:** Fully Solana — no cross-chain bridging needed
+- **Arbitrage vectors:**
+  1. RWA underpriced — buy pNFT below 85% FMV, instant-sell to Collector Crypt buyback
+  2. Paper/RWA spread — buy pNFT, redeem physical, sell on TCGPlayer/eBay
+  3. Cross-platform — Collector Crypt vs Phygitals price differences
+- **Execution APIs:** Magic Eden REST (120 QPM, `@magiceden/magiceden-sdk`) + Tensor GraphQL (`@tensor-oss/tensorswap-sdk`)
+- **Open questions:** Capital allocation, Collector Crypt collection addresses, typical spreads, Tensor API application
+- **Next steps:** 
+  1. Research Collector Crypt collection data on Magic Eden (listings, floor prices, volume)
+  2. Prototype read-only signal detector (paper price vs pNFT price comparison)
+  3. Apply for Tensor API access
+- **Revenue model:** x402 API fees (existing) + autonomous trading profits (new)
 
 ### Blockers
 - **Agent wallet not created yet** — user needs to create in Phantom, export key, set on Railway (must be done outside Claude for security)
@@ -86,4 +127,5 @@
 - [x] Phase 6: Dashboard
 - [x] Phase 7: SolEnrich Integration
 - [ ] Go-Live: Agent wallet + deploy + data refresh + e2e test
-- [ ] Phase 8: Autonomous Trading Agent (Courtyard.io / OpenSea integration)
+- [ ] Phase 8: Tokenized RWA Oracle (Collector Crypt + Phygitals + Magic Eden ingestion, rwa-fair-value + rwa-arbitrage endpoints) — see `docs/PHASE-8-PLAN.md`
+- [ ] Phase 9 (gated): Autonomous Trading Agent — start only after ≥1 paying bot user on Phase 8 oracle
