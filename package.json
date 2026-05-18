@@ -16,6 +16,7 @@
     "db:seed:pokemon": "npx tsx src/lib/db/seed-pokemon.ts",
     "db:seed:mtg": "npx tsx src/lib/db/seed-mtg.ts",
     "ingest:prices": "npx tsx src/lib/ingestion/scryfall-prices.ts",
+    "ingest:pokemon-prices": "npx tsx src/lib/ingestion/pokemontcg-prices.ts",
     "ingest:snapshots": "npx tsx src/lib/ingestion/aggregate-snapshots.ts"
   },
   "dependencies": {
