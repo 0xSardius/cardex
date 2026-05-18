@@ -76,7 +76,10 @@ Plus a mapping helper `mint_card_map` for mint → collectible_id resolution. Se
 
 Adapter:
 - `src/lib/ingestion/magic-eden.ts` — pulls active listings for Collector Crypt + Phygitals collection mint authorities, paginated
-- Runs every 10-15 min via Railway cron (mind the 120 QPM ceiling)
+- Runs every **20-30 min** via Railway cron — Step 0 recon found the 10-15 min cadence exceeds ME's 120 QPM ceiling by 2.75-3.4x (see `docs/RWA-RECON.md` §5). Helius webhook on M2 is the documented migration path if freshness becomes a complaint.
+- Wrap ME calls behind a `MagicEdenClient` interface — v2 has a deprecation notice; expect v4 swap within 6 months.
+- Slugs to start with: `collector_crypt` (filter by `Category == "Pokemon"` attribute). Phygitals slug TBD — `phygitals_collectibles` returns 0 listed; live slug not yet found (recon action item §7.3).
+- Seed initial `mint_card_map` via Helius `searchAssets` by `authorityAddress: DQPERZ9e86pNJ4mhUnCEP8V75yxZofsipoVrRWT5Wdxd` (CC update authority — gets all 122K mints, listed or not), not by paginating ME (only ~5,500 listed at any time).
 
 **Exit:** `listings` table populated with ≥1K active rows; manual SQL verifies a few mints resolve to known cards.
 
