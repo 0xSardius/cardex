@@ -322,3 +322,29 @@ export const paymentEvents = pgTable(
     index("payment_events_created_at_idx").on(t.createdAt),
   ]
 );
+
+// ─── Seller Intel Cache (Phase 8 — SolEnrich) ─────────────────────────────────
+//
+// 6h TTL cache for SolEnrich seller enrichment. The margin lever for
+// rwa-arbitrage: same seller across 50 listings should hit SolEnrich once.
+//
+// Independent fetched_at per payload so a failure on one endpoint doesn't
+// burn freshness on the other (due-diligence is $0.020, wallet-graph $0.010).
+
+export const sellerIntel = pgTable(
+  "seller_intel",
+  {
+    walletAddress: varchar("wallet_address", { length: 64 }).primaryKey(),
+    riskPayload: jsonb("risk_payload"),
+    riskFetchedAt: timestamp("risk_fetched_at", { withTimezone: true }),
+    clusterPayload: jsonb("cluster_payload"),
+    clusterFetchedAt: timestamp("cluster_fetched_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("seller_intel_risk_fetched_at_idx").on(t.riskFetchedAt),
+    index("seller_intel_cluster_fetched_at_idx").on(t.clusterFetchedAt),
+  ]
+);
