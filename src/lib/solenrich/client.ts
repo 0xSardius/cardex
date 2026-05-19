@@ -13,7 +13,11 @@ import { ExactSvmScheme } from "@x402/svm/exact/client";
 import { SOLANA_DEVNET_CAIP2, SOLANA_MAINNET_CAIP2 } from "@x402/svm";
 import { createKeyPairSignerFromBytes } from "@solana/signers";
 import { base58 } from "@scure/base";
-import type { EnrichWalletLightResponse } from "./types";
+import type {
+  DueDiligenceResponse,
+  EnrichWalletLightResponse,
+  WalletGraphResponse,
+} from "./types";
 
 const SOLENRICH_BASE_URL =
   "https://solenrich-production.up.railway.app/entrypoints";
@@ -97,6 +101,88 @@ export async function enrichWalletLight(
     return (await res.json()) as EnrichWalletLightResponse;
   } catch (err) {
     console.error("[solenrich] enrich-wallet-light error:", err);
+    return null;
+  }
+}
+
+/**
+ * Call SolEnrich due-diligence endpoint via x402 ($0.020 USDC).
+ * Comprehensive wallet security analysis — CardEx uses for `seller_risk`
+ * in Phase 8 `rwa-arbitrage`.
+ *
+ * Returns null if x402 client is unconfigured, network fails, or
+ * SolEnrich returns a non-2xx response.
+ */
+export async function dueDiligence(
+  address: string
+): Promise<DueDiligenceResponse | null> {
+  const paidFetch = await getPaymentFetch();
+  if (!paidFetch) return null;
+
+  try {
+    const res = await paidFetch(
+      `${SOLENRICH_BASE_URL}/due-diligence/invoke`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "CardEx/0.1 (https://github.com/0xSardius/cardex)",
+        },
+        body: JSON.stringify({ address }),
+      }
+    );
+
+    if (!res.ok) {
+      console.error(
+        `[solenrich] due-diligence failed: ${res.status} ${res.statusText}`
+      );
+      return null;
+    }
+
+    return (await res.json()) as DueDiligenceResponse;
+  } catch (err) {
+    console.error("[solenrich] due-diligence error:", err);
+    return null;
+  }
+}
+
+/**
+ * Call SolEnrich wallet-graph endpoint via x402 ($0.010 USDC).
+ * Detects wash-trade clusters and connected-wallet relationships —
+ * CardEx uses for `seller_cluster` + wash-trade filter in Phase 8.
+ *
+ * Returns null if x402 client is unconfigured, network fails, or
+ * SolEnrich returns a non-2xx response.
+ */
+export async function walletGraph(
+  address: string
+): Promise<WalletGraphResponse | null> {
+  const paidFetch = await getPaymentFetch();
+  if (!paidFetch) return null;
+
+  try {
+    const res = await paidFetch(
+      `${SOLENRICH_BASE_URL}/wallet-graph/invoke`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "CardEx/0.1 (https://github.com/0xSardius/cardex)",
+        },
+        body: JSON.stringify({ address }),
+      }
+    );
+
+    if (!res.ok) {
+      console.error(
+        `[solenrich] wallet-graph failed: ${res.status} ${res.statusText}`
+      );
+      return null;
+    }
+
+    return (await res.json()) as WalletGraphResponse;
+  } catch (err) {
+    console.error("[solenrich] wallet-graph error:", err);
     return null;
   }
 }
