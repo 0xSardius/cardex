@@ -17,6 +17,7 @@
     "db:seed:mtg": "npx tsx src/lib/db/seed-mtg.ts",
     "ingest:prices": "npx tsx src/lib/ingestion/scryfall-prices.ts",
     "ingest:pokemon-prices": "npx tsx src/lib/ingestion/pokemontcg-prices.ts",
+    "ingest:magic-eden": "npx tsx src/lib/ingestion/magic-eden.ts",
     "ingest:snapshots": "npx tsx src/lib/ingestion/aggregate-snapshots.ts"
   },
   "dependencies": {
