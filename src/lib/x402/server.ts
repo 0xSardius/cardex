@@ -88,6 +88,16 @@ export const routesConfig = {
     description:
       "Wallet intelligence via SolEnrich integration (agent-to-agent x402)",
   },
+  "POST /api/v1/rwa-fair-value": {
+    accepts: {
+      scheme: "exact",
+      payTo: PAY_TO,
+      price: "$0.002",
+      network: NETWORK,
+    },
+    description:
+      "Paper-vs-onchain fair value for a single tokenized card mint",
+  },
 };
 
 export { resourceServer, NETWORK, PAY_TO };

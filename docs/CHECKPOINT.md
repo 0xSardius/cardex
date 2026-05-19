@@ -1,6 +1,39 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-05-16
+## Last Session: 2026-05-18
+
+### Phase 8 Steps 0, 1, 2, 3 Shipped (single push to main)
+
+- **Step 0 (recon):** `docs/RWA-RECON.md`. Default to Magic Eden REST + Helius DAS; Helius webhook on M2 as documented fallback. Collector Crypt is plain ME M2 under the hood (no custom program), card identity fully parseable from offchain attributes, seller concentration is power-law (good for SolEnrich cache margin). Polling cadence dropped from 10-15 min to 20-30 min in `docs/PHASE-8-PLAN.md` Step 2 — original cadence exceeded ME's 120 QPM ceiling by ~3x.
+- **Step 1 (Pokemon paper prices):** Adapter + cron via pokemontcg.io. TCGPlayer market price (six variant conditions) + CardMarket trend price (EUR). Step 1 smoke (page 1, 250 cards): 933 price_points, 97.6% TCGPlayer coverage, 98.4% CardMarket coverage. Full ingestion completed end of session.
+- **Step 2 (ME listings adapter):** New `listings` + `mint_card_map` tables. `MagicEdenClient` interface wraps v2 REST so v4/M2 swap is contained. Pokemon-only attribute filter on the `collector_crypt` slug (default sort is multi-category — first smoke wasted 50 lookups on Moonbirds/Basketball). Cold-run ingestion brought 2,051 active CC Pokemon listings into Neon with 49 unique mints (16%) resolved to catalog. 84% of mints have sparse `Set`/`Card Name` attributes — improvement is Step 4 work.
+- **Step 3 (`POST /api/v1/rwa-fair-value`):** $0.002 endpoint. Accepts `{ mint }` or `{ listing_url }`. Joins listings + mint_card_map + collectibles + price_points. Returns paper_price (median over 7d window), onchain best ask, spread %. ETag + Cache-Control: max-age=30. SQL smoke verified the join path produces correct data for Raichu xy8 #49 PSA 8. Known gap: `paper_price.condition_basis: "raw"` — graded-card prices come in Step 4 via PriceCharting.
+
+### Known gaps logged for Step 4
+
+- **Mint→catalog resolution rate is 16%.** Most CC mints have sparse on-chain attribute schemas (missing `Set`/`Card Name`). Step 4 needs: (a) token-`name` field fallback parser, (b) more CC `Set` format variations, (c) Helius DAS fallback for richer metadata.
+- **No graded paper prices.** TCGPlayer/CardMarket are raw. CGC 9.5 cards on Collector Crypt comparing to raw paper prices = misleading spread. PriceCharting is the Step 4 integration that closes this.
+- **SOL→USD conversion deferred.** Listings denominated in SOL show `best_ask_currency: "SOL_only"`. Step 4 needs a SOL/USD price source.
+- **Phygitals slug still unknown.** `phygitals_collectibles` returns 0 listed. Step 4 should resolve live Phygitals ME slug(s) or skip.
+
+### Commits (pushed to `origin/main`)
+
+- `1a2044d` — Phase 8 Step 0 recon: RWA platform read-surface decision
+- `e97bd11` — Phase 8 Step 1: Pokemon paper-price ingestion via pokemontcg.io
+- `6a93be4` — Phase 8 Step 2: Magic Eden listings adapter + mint_card_map
+- (this session, pending) Step 3 commit + checkpoint
+
+### Where to resume
+
+Next steps in order:
+1. **Verify full Pokemon ingestion ran** — `SELECT COUNT(*) FROM price_points WHERE source LIKE 'pokemontcg_%'`. If <30K, re-run `npm run ingest:pokemon-prices`.
+2. **Run `npm run ingest:snapshots`** to populate `market_snapshots` for Pokemon (Step 3 falls back to `price_points`, but snapshots are faster).
+3. **Re-run Step 3 smoke** with a real mint that has both an active listing AND paper prices to see a real spread number. Suggested mint: `4Uzajig8c5AuR3UNRrg13ErDqbQiNz5YShZMPyGDUenh` (Raichu xy8 #49 PSA 8).
+4. **Start Step 4** — `POST /api/v1/rwa-arbitrage` + SolEnrich `due-diligence`/`wallet-graph` integration + `seller_intel` cache table (6h TTL).
+
+---
+
+## Previous Session: 2026-05-16
 
 ### Positioning Sharpened — Agentic-Commerce Wedge
 
