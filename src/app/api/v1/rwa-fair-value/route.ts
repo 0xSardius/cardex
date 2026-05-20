@@ -31,6 +31,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { agentMetaSync as agentMeta } from "@/lib/agent-meta";
 import { recordPayment } from "@/lib/x402/payments";
+import { getSolUsdRate, type SolUsdRate } from "@/lib/oracle/sol-usd";
 
 interface FairValueRequest {
   mint?: string;
@@ -168,19 +169,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 4. Active onchain listings for this mint.
+  // 4. Active onchain listings for this mint. Sort happens in JS so we can
+  //    use the Pyth SOL/USD oracle to rank SOL-only listings against
+  //    USDC/USD ones on the same axis.
   const listingRows = (await sql`
     SELECT id, source, marketplace, seller, price_sol, price_usdc, price_usd,
            pda_address, observed_at
     FROM listings
     WHERE mint_address = ${mint}
       AND expired_at IS NULL
-    ORDER BY (CASE WHEN price_usdc IS NOT NULL THEN price_usdc::numeric
-                   WHEN price_usd IS NOT NULL THEN price_usd::numeric
-                   ELSE NULL END) ASC NULLS LAST
+    ORDER BY observed_at DESC
   `) as ListingRow[];
 
-  const onchain = await buildOnchainSection(listingRows);
+  const solUsdRate = await getSolUsdRate();
+  const onchain = await buildOnchainSection(listingRows, solUsdRate);
 
   // 5. Spread calculation.
   let spread: {
@@ -266,23 +268,36 @@ function resolveMint(body: FairValueRequest): string | null {
   return null;
 }
 
-async function buildOnchainSection(rows: ListingRow[]): Promise<{
+interface EnrichedListing {
+  source: string;
+  marketplace: string | null;
+  seller: string | null;
+  price_sol: number | null;
+  price_usdc: number | null;
+  price_usd: number | null;
+  /** USD-equivalent value used for sort + spread math. Pulled from the
+   *  best available column, falling back to price_sol × Pyth SOL/USD. */
+  effective_usd: number | null;
+  pda_address: string | null;
+  observed_minutes_ago: number;
+}
+
+async function buildOnchainSection(
+  rows: ListingRow[],
+  solUsdRate: SolUsdRate | null
+): Promise<{
   best_ask_usd: number | null;
   best_ask_currency: string | null;
   source: string | null;
   marketplace: string | null;
   fresh_minutes: number | null;
   active_count: number;
-  all_listings: Array<{
+  sol_usd_rate: {
+    rate: number;
+    age_ms: number;
     source: string;
-    marketplace: string | null;
-    seller: string | null;
-    price_sol: number | null;
-    price_usdc: number | null;
-    price_usd: number | null;
-    pda_address: string | null;
-    observed_minutes_ago: number;
-  }>;
+  } | null;
+  all_listings: EnrichedListing[];
 }> {
   if (rows.length === 0) {
     return {
@@ -292,34 +307,62 @@ async function buildOnchainSection(rows: ListingRow[]): Promise<{
       marketplace: null,
       fresh_minutes: null,
       active_count: 0,
+      sol_usd_rate: solUsdRate
+        ? { rate: solUsdRate.rate, age_ms: solUsdRate.age_ms, source: solUsdRate.source }
+        : null,
       all_listings: [],
     };
   }
 
-  const all = rows.map((r) => ({
-    source: r.source,
-    marketplace: r.marketplace,
-    seller: r.seller,
-    price_sol: r.price_sol ? parseFloat(r.price_sol) : null,
-    price_usdc: r.price_usdc ? parseFloat(r.price_usdc) : null,
-    price_usd: r.price_usd ? parseFloat(r.price_usd) : null,
-    pda_address: r.pda_address,
-    observed_minutes_ago: Math.floor(
-      (Date.now() - new Date(r.observed_at).getTime()) / 60_000
-    ),
-  }));
+  const enriched: EnrichedListing[] = rows.map((r) => {
+    const priceSol = r.price_sol ? parseFloat(r.price_sol) : null;
+    const priceUsdc = r.price_usdc ? parseFloat(r.price_usdc) : null;
+    const priceUsd = r.price_usd ? parseFloat(r.price_usd) : null;
+    const effective =
+      priceUsdc ??
+      priceUsd ??
+      (priceSol != null && solUsdRate ? priceSol * solUsdRate.rate : null);
+    return {
+      source: r.source,
+      marketplace: r.marketplace,
+      seller: r.seller,
+      price_sol: priceSol,
+      price_usdc: priceUsdc,
+      price_usd: priceUsd,
+      effective_usd: effective,
+      pda_address: r.pda_address,
+      observed_minutes_ago: Math.floor(
+        (Date.now() - new Date(r.observed_at).getTime()) / 60_000
+      ),
+    };
+  });
 
-  // Best ask in USD-equivalent. If we have price_usdc, use that; else null.
-  // (SOL→USD conversion is deferred until Step 4 when we add a price oracle.)
-  const best = all[0];
+  // Sort cheapest-first on effective USD; nulls last.
+  enriched.sort((a, b) => {
+    const av = a.effective_usd ?? Number.POSITIVE_INFINITY;
+    const bv = b.effective_usd ?? Number.POSITIVE_INFINITY;
+    return av - bv;
+  });
+
+  const best = enriched[0];
+  let bestCurrency: string;
+  if (best.price_usdc != null) bestCurrency = "USDC";
+  else if (best.price_usd != null) bestCurrency = "USD";
+  else if (best.price_sol != null && solUsdRate)
+    bestCurrency = "SOL→USD (Pyth)";
+  else bestCurrency = "SOL_only";
+
   return {
-    best_ask_usd: best.price_usdc ?? best.price_usd,
-    best_ask_currency: best.price_usdc != null ? "USDC" : best.price_usd != null ? "USD" : "SOL_only",
+    best_ask_usd: best.effective_usd,
+    best_ask_currency: bestCurrency,
     source: best.source,
     marketplace: best.marketplace,
     fresh_minutes: best.observed_minutes_ago,
     active_count: rows.length,
-    all_listings: all.slice(0, 10), // cap response payload
+    sol_usd_rate: solUsdRate
+      ? { rate: solUsdRate.rate, age_ms: solUsdRate.age_ms, source: solUsdRate.source }
+      : null,
+    all_listings: enriched.slice(0, 10), // cap response payload
   };
 }
 
