@@ -35,27 +35,72 @@ async function main() {
     collectible = rows[0] ?? null;
   }
 
+  // Mirror the production route: graded lookup first if mint is graded,
+  // raw fallback if no graded data exists yet.
+  let targetCondition: string | null = null;
+  if (mintRow.grader && mintRow.grade) {
+    const prefix = (mintRow.grader as string).toLowerCase();
+    if (['psa', 'cgc', 'bgs', 'sgc'].includes(prefix)) {
+      const numeric = parseFloat(mintRow.grade);
+      if (Number.isFinite(numeric)) {
+        const suffix = Number.isInteger(numeric) ? `${numeric}` : numeric.toFixed(1);
+        targetCondition = `${prefix}-${suffix}`;
+      }
+    }
+  }
+
   let paperPrice: any = null;
   if (collectible) {
-    const paperRows = (await sql`
-      SELECT
-        (percentile_cont(0.5) WITHIN GROUP (ORDER BY price_usd::numeric))::text AS median_usd,
-        COUNT(DISTINCT source)::text AS source_count,
-        MAX(observed_at) AS newest_observed_at
-      FROM price_points
-      WHERE collectible_id = ${collectible.id}::uuid
-        AND observed_at > NOW() - INTERVAL '7 days'
-    `) as any[];
-    const p = paperRows[0];
-    if (p?.median_usd) {
-      paperPrice = {
-        median_usd: parseFloat(p.median_usd),
-        source_count: parseInt(p.source_count),
-        fresh_minutes: p.newest_observed_at
-          ? Math.floor((Date.now() - new Date(p.newest_observed_at).getTime()) / 60000)
-          : null,
-        condition_basis: 'raw',
-      };
+    if (targetCondition) {
+      const gradedRows = (await sql`
+        SELECT
+          (percentile_cont(0.5) WITHIN GROUP (ORDER BY price_usd::numeric))::text AS median_usd,
+          COUNT(DISTINCT source)::text AS source_count,
+          MAX(observed_at) AS newest_observed_at
+        FROM price_points
+        WHERE collectible_id = ${collectible.id}::uuid
+          AND condition = ${targetCondition}
+          AND observed_at > NOW() - INTERVAL '30 days'
+      `) as any[];
+      const p = gradedRows[0];
+      if (p?.median_usd) {
+        paperPrice = {
+          median_usd: parseFloat(p.median_usd),
+          source_count: parseInt(p.source_count),
+          fresh_minutes: p.newest_observed_at
+            ? Math.floor((Date.now() - new Date(p.newest_observed_at).getTime()) / 60000)
+            : null,
+          condition_basis: targetCondition,
+          requested_condition: targetCondition,
+        };
+      }
+    }
+    if (!paperPrice) {
+      const rawRows = (await sql`
+        SELECT
+          (percentile_cont(0.5) WITHIN GROUP (ORDER BY price_usd::numeric))::text AS median_usd,
+          COUNT(DISTINCT source)::text AS source_count,
+          MAX(observed_at) AS newest_observed_at
+        FROM price_points
+        WHERE collectible_id = ${collectible.id}::uuid
+          AND condition NOT LIKE 'psa-%'
+          AND condition NOT LIKE 'cgc-%'
+          AND condition NOT LIKE 'bgs-%'
+          AND condition NOT LIKE 'sgc-%'
+          AND observed_at > NOW() - INTERVAL '7 days'
+      `) as any[];
+      const p = rawRows[0];
+      if (p?.median_usd) {
+        paperPrice = {
+          median_usd: parseFloat(p.median_usd),
+          source_count: parseInt(p.source_count),
+          fresh_minutes: p.newest_observed_at
+            ? Math.floor((Date.now() - new Date(p.newest_observed_at).getTime()) / 60000)
+            : null,
+          condition_basis: targetCondition ? 'raw_fallback' : 'raw',
+          requested_condition: targetCondition,
+        };
+      }
     }
   }
 
