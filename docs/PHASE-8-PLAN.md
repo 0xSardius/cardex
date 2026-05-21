@@ -115,7 +115,22 @@ Response shape (stable — bots will hardcode this):
 
 **Exit:** Mainnet endpoint returns valid responses for 100 random sampled mints with <500ms p95.
 
-### Step 4 — `rwa-arbitrage` endpoint + SolEnrich enrichment (3-4 days)
+### Step 4 — `rwa-arbitrage` endpoint + SolEnrich enrichment (3-4 days) — **SHIPPED 2026-05-21**
+
+**Outcome (commits `d594a5c` → `fa0709f`):**
+- All 8 substeps (4a–4h, plus a 4d.1 corrective) on `main`; each is a single pushed commit, each leaves the tree working.
+- Pipeline live: candidates → Pyth USD conversion → graded-aware paper lookup → marketplace-fee net profit → SolEnrich-cached seller intel → wash-trade filter → sorted result.
+- Smoke against 70 active CC listings shows 4 candidate opportunities surfacing, all `condition_basis: "raw_fallback"` (the documented free-tier-Pokemon-Price-Tracker gap — flips to real graded-aware basis once the API key is configured).
+- Endpoint choice corrected via OpenAPI re-probe: `due-diligence` is token-mint analysis, NOT wallet risk. Seller risk uses `enrich-wallet-light` ($0.002); cold-seller cost dropped from $0.030 to $0.012.
+- Latent bug fixed: x402 client now registers Solana mainnet AND devnet (Phase 7 `wallet-insight` would have failed locally in any non-mainnet env).
+- Open TODOs deferred to Phase 8 follow-up: CGC/BGS endpoints, wallet-graph response field tightening (heuristic in place), documented wash-trade case (needs funded mainnet wallet), Phygitals slug resolution.
+
+See `docs/CHECKPOINT.md` (2026-05-19 → 2026-05-21 entry) for the full substep table.
+
+---
+
+**Original plan below — preserved for traceability:**
+
 
 `POST /api/v1/rwa-arbitrage` — $0.005 USDC.
 

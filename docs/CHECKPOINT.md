@@ -1,6 +1,67 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-05-18
+## Last Session: 2026-05-19 → 2026-05-21
+
+### Verify sequence (2026-05-19)
+
+Resumed where the 2026-05-18 session ended. Verify steps from that checkpoint executed:
+1. **Pokemon price_points health:** 58,812 across 16,380 distinct collectibles, latest 2026-05-19. Well above the 30K floor — no re-run needed.
+2. **Snapshot aggregation:** ran `npm run ingest:snapshots`, created/updated 26,320 `market_snapshots` for the day.
+3. **Step 3 smoke for Raichu xy8 #49 PSA 8 (`4Uzajig8c5AuR3UNRrg13ErDqbQiNz5YShZMPyGDUenh`):** mint→collectible→paper_price→listing join all working. Paper `$2.285` raw, onchain `0.5 SOL`, spread null (no SOL/USD oracle yet — exact gap Step 4 closes).
+
+`scripts/verify-pokemon-prices.ts` and `scripts/smoke-rwa-fair-value.ts` captured the verify pipeline for re-use.
+
+### Step 4 shipped as 8 substep commits
+
+Per the modular plan, each substep is a single pushed commit on `main`, each leaves the tree working.
+
+| # | Commit | What | Notes |
+|---|---|---|---|
+| 4a | `d594a5c` | SolEnrich client wrappers — `dueDiligence`/`walletGraph` | Later corrected: see 4d.1 |
+| 4b | `6fe0a61` | `seller_intel` cache table + cache-first helper | 6h TTL, per-payload `fetched_at`, applied via `scripts/apply-seller-intel.ts` (migrations were already drifted from live state from earlier `db:push` runs, so the migration file is documentation-only — idempotent apply via the script) |
+| 4c | `84b0ed0` | Pyth Hermes SOL/USD oracle | 60s in-process cache; wired into `rwa-fair-value` so SOL-only listings get a USD-equivalent ask. First real spread number through the pipeline (Raichu xy8 PSA 8 → 0.5 SOL × $86 = $43 vs $2.29 raw paper → +1780% spread, exactly the graded-vs-raw gap 4d closes) |
+| 4d | `bff1937` | Pokemon Price Tracker graded ingestion | Pivoted off PriceCharting per pre-build research (PriceCharting commercial terms unclear; Pokemon Price Tracker Business tier $99/mo explicitly authorizes x402 resale). Free-tier-safe (80 lookups/day), prioritizes cards with active CC listings, falls back to high-value-paper cards. **Awaits `POKEMON_PRICE_TRACKER_API_KEY` for live verification.** |
+| 4d.1 | `6c187c7` | SolEnrich endpoint correction + tier policy in CLAUDE.md | Re-probed `api.solenrich.com/openapi.json` (now publicly readable) and found `due-diligence` takes a **token mint**, not a wallet — wrong endpoint for seller risk. Pivoted seller_risk to `enrich-wallet-light` ($0.002, already in our client). Renamed `dueDiligence`→`tokenDueDiligence(mint)` for future tokenized-mint vetting. Updated base URL to canonical `api.solenrich.com/entrypoints`. |
+| 4e | `aa3c6e8` | Marketplace fees table | ME 2% taker, optional royalty default 0% (ME Solana royalties are buyer-opt-in). CC inherits via M2. Phygitals defaulted to ME-equivalent (verify in next session). Deliberately excludes paper-side resale fees and CC redemption — bot supplies its own paper-side discount. |
+| 4f | `8434c5b` | `rwa-arbitrage` endpoint skeleton — $0.005/call | Per-call (not per-result) pricing — x402 doesn't natively support dynamic pricing. Shared paper-price helper extracted to `src/lib/pricing/paper-price.ts`. Smoke against live data: 70 active listings → 4 surfaced opportunities, all `raw_fallback`. Pipeline structurally complete. |
+| 4g+4h | `fa0709f` | SolEnrich enrichment + wash-trade filter | Batched. Seller intel via `getSellerIntelBatch` (cache-first, 6h TTL). Response surfaces `wash_trade_dropped` + `seller_intel_unavailable` so bots can detect SolEnrich brownouts. Wash-trade detector probes 6 field name variants. **Bonus fix:** x402 client now registers both Solana mainnet + devnet — single-network registration would 4xx locally because SolEnrich is mainnet-only. Same bug latent in Phase 7 `wallet-insight` since shipping. |
+
+### Open TODOs surfaced during Step 4 (to address in Phase 8 follow-up or Phase 9)
+
+- **Pokemon Price Tracker key not yet provisioned.** Until the user signs up, `condition_basis` stays `raw_fallback` on graded mints and the spread is misleading on PSA inventory. Free tier (100/day, dev-only) unlocks meaningful smoke; Business tier ($99/mo) required before mainnet flip.
+- **CGC and BGS endpoint shapes unknown.** Pokemon Price Tracker advertises support but their docs only specified the PSA endpoint at integration time. Until adapters land, CGC/BGS mints fall back to raw paper with `raw_fallback` flag.
+- **Wallet-graph response shape isn't in the public OpenAPI.** `isWashTradeCluster` probes 6 likely variants (`washTradeFlag`, `wash_trade_flag`, `suspicious`, `verdict='wash'`, etc.); needs tightening once a live sample is captured.
+- **No documented wash-trade case yet.** Plan exit criterion requires ≥1. Capturing this needs a funded mainnet wallet running real SolEnrich queries. Defer to first post-launch run with the agent wallet provisioned.
+- **Phygitals slug still unknown** (carryover from 2026-05-18). `phygitals_collectibles` returns 0 listed; live slug unresolved.
+- **Mint→catalog resolution still at 16%** (carryover). 84% of CC mints have sparse `Set`/`Card Name` attributes. Helius DAS fallback / token-`name` field parser are next-session work.
+
+### Phase 8 Definition of Done status
+
+| Item | Status | Notes |
+|---|---|---|
+| 1. Pokemon paper prices ingested daily | ✅ | pokemontcg.io for raw; PPT for graded once key lands |
+| 2. Active CC/Phygitals/ME listings indexed continuously | ⚠️ | CC indexed (2,051 active); Phygitals slug unresolved |
+| 3. `rwa-fair-value` returns paper + onchain + spread + freshness in <500ms p95 | ✅ | Mainnet route shipped; latency unverified against the 500ms bar |
+| 4. `rwa-arbitrage` returns net-profit-sorted underpriced listings | ✅ | Shipped 4f+4g+4h |
+| 5. Batch `rwa-fair-value` accepts up to 50 mints/call | ❌ | Step 5 work |
+| 6. ≥1 external bot user paying ≥100 mainnet queries | ❌ | The gate — Step 6 outreach |
+| 7. Phase 9 unblocked (our own bot would have everything it needs) | ⚠️ | Almost — graded paper + Phygitals + CGC/BGS gaps remain |
+
+### Where to resume next session
+
+1. **Drop `POKEMON_PRICE_TRACKER_API_KEY` into `.env`** — sign up at pokemonpricetracker.com (free tier OK for dev).
+2. **`npm run ingest:pokemon-graded`** — populate ~80 graded paper price_points.
+3. **Re-run Raichu fair-value smoke** — confirm `condition_basis: "psa-8"` and a sane spread (~$25-40 onchain vs ~$20-30 PSA 8 paper instead of $2.29 raw).
+4. **Re-run arbitrage smoke** — see how the funnel changes once graded paper is in (real arbitrage opportunities should rise as the false-positives drop).
+5. **Decide:** Phase 8 Step 5 (batch endpoint + ETag headers + OpenAPI + SDK example) OR Step 6 outreach (the actual wedge gate). The plan calls for both in parallel; outreach is gating, build work is not.
+
+### Commits this session (all pushed to `origin/main`)
+
+`d594a5c` `6fe0a61` `84b0ed0` `bff1937` `6c187c7` `aa3c6e8` `8434c5b` `fa0709f`
+
+---
+
+## Previous Session: 2026-05-18
 
 ### Phase 8 Steps 0, 1, 2, 3 Shipped (single push to main)
 
@@ -160,5 +221,5 @@ Checked SolEnrich's current scope: grew from 11 → 25 endpoints, shipped MCP se
 - [x] Phase 6: Dashboard
 - [x] Phase 7: SolEnrich Integration
 - [ ] Go-Live: Agent wallet + deploy + data refresh + e2e test
-- [ ] Phase 8: Tokenized RWA Oracle (Collector Crypt + Phygitals + Magic Eden ingestion, rwa-fair-value + rwa-arbitrage endpoints) — see `docs/PHASE-8-PLAN.md`
+- [~] Phase 8: Tokenized RWA Oracle — Steps 0–4 shipped (`rwa-fair-value`, `rwa-arbitrage` + SolEnrich enrichment, marketplace fees, Pyth oracle, Pokemon Price Tracker scaffold). Steps 5 (batch endpoint + ETag + OpenAPI + SDK example) and 6 (design-partner outreach, the actual wedge gate) remain. See `docs/PHASE-8-PLAN.md` and the Step 4 substep log above.
 - [ ] Phase 9 (gated): Autonomous Trading Agent — start only after ≥1 paying bot user on Phase 8 oracle
