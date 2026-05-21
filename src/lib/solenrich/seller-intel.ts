@@ -2,11 +2,22 @@
  * Seller intel cache — the margin lever for Phase 8 `rwa-arbitrage`.
  *
  * SolEnrich charges per call. A 50-listing arbitrage scan with no cache
- * would burn $1.50 in SolEnrich fees against $0.25 of CardEx revenue.
+ * would burn ~$0.60 in SolEnrich fees against $0.25 of CardEx revenue.
  * Caching the same seller across listings flips that math.
  *
+ * Endpoint choice (corrected post-4d):
+ *   - risk    → enrich-wallet-light ($0.002). Returns riskScore + riskLevel.
+ *               Originally planned as due-diligence ($0.020), but that
+ *               endpoint takes a token mint, not a wallet — wrong signal.
+ *               enrich-wallet-light is the documented wallet-risk endpoint.
+ *   - cluster → wallet-graph ($0.010). Suspicious-cluster detection.
+ *
+ * Cold seller cost: $0.012. Warm cache (most sellers seen in last 6h):
+ * near-zero. Endpoint revenue is $0.005, so net margin is positive even
+ * on a cold-only scan (cache hit rate just sets how much).
+ *
  * TTL: 6h. Per-payload `fetched_at` lets us refresh risk and cluster
- * independently — a failed due-diligence call doesn't burn the wallet-graph
+ * independently — a failed risk fetch doesn't burn the wallet-graph
  * cache and vice versa.
  *
  * Graceful degradation: if SOLANA_PRIVATE_KEY is unset or SolEnrich is
@@ -16,13 +27,13 @@
  */
 
 import { neon } from "@neondatabase/serverless";
-import { dueDiligence, walletGraph } from "./client";
-import type { DueDiligenceResponse, WalletGraphResponse } from "./types";
+import { enrichWalletLight, walletGraph } from "./client";
+import type { EnrichWalletLightResponse, WalletGraphResponse } from "./types";
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export interface SellerIntel {
-  risk: DueDiligenceResponse | null;
+  risk: EnrichWalletLightResponse | null;
   cluster: WalletGraphResponse | null;
   risk_fetched_at: Date | null;
   cluster_fetched_at: Date | null;
@@ -32,7 +43,7 @@ export interface SellerIntel {
 
 interface SellerIntelRow {
   wallet_address: string;
-  risk_payload: DueDiligenceResponse | null;
+  risk_payload: EnrichWalletLightResponse | null;
   risk_fetched_at: string | null;
   cluster_payload: WalletGraphResponse | null;
   cluster_fetched_at: string | null;
@@ -70,7 +81,7 @@ export async function getSellerIntel(address: string): Promise<SellerIntel> {
   const needRisk = !cached || !isFresh(cached.risk_fetched_at);
   const needCluster = !cached || !isFresh(cached.cluster_fetched_at);
 
-  let risk: DueDiligenceResponse | null = cached?.risk_payload ?? null;
+  let risk: EnrichWalletLightResponse | null = cached?.risk_payload ?? null;
   let cluster: WalletGraphResponse | null = cached?.cluster_payload ?? null;
   let riskFetchedAt: Date | null = cached?.risk_fetched_at ? new Date(cached.risk_fetched_at) : null;
   let clusterFetchedAt: Date | null = cached?.cluster_fetched_at ? new Date(cached.cluster_fetched_at) : null;
@@ -81,7 +92,7 @@ export async function getSellerIntel(address: string): Promise<SellerIntel> {
   if (needRisk || needCluster) {
     attemptedRemote = true;
     const [riskRes, clusterRes] = await Promise.all([
-      needRisk ? dueDiligence(address) : Promise.resolve(null),
+      needRisk ? enrichWalletLight(address) : Promise.resolve(null),
       needCluster ? walletGraph(address) : Promise.resolve(null),
     ]);
     const now = new Date();

@@ -132,18 +132,20 @@ Response: array of underpriced listings sorted by **net profit after marketplace
 Pure SQL query against `listings` ⋈ `market_snapshots`, then enriched by SolEnrich calls — see SolEnrich integration block below.
 
 **SolEnrich integration (load-bearing, not optional):**
-- Extend `src/lib/solenrich/client.ts` with `dueDiligence(address)` and `walletGraph(address)` wrappers (mirror existing `enrichWalletLight` pattern)
-- Extend `src/lib/solenrich/types.ts` with response types for both
-- New `seller_intel` cache table: `(wallet_address PK, risk_payload jsonb, cluster_payload jsonb, fetched_at)` with 6h TTL
-- Cache-first lookup — same seller across 50 listings should hit SolEnrich once. **This is the margin lever.** Without caching, cost per arbitrage call exceeds revenue.
+- Extend `src/lib/solenrich/client.ts` with `walletGraph(address)` + `tokenDueDiligence(mint)` wrappers (mirror existing `enrichWalletLight` pattern). **Endpoint choice corrected 2026-05-20:** seller risk uses `enrich-wallet-light` (already in the client), NOT `due-diligence`. The OpenAPI spec confirms `due-diligence` takes a **token mint** and returns SAFE/CAUTION/RISKY on a token — wrong signal for a seller wallet. `tokenDueDiligence` is kept as a future hook for tokenized-mint program vetting (e.g. a compromised CC vault authority).
+- Extend `src/lib/solenrich/types.ts` with response types
+- New `seller_intel` cache table: `(wallet_address PK, risk_payload jsonb, risk_fetched_at, cluster_payload jsonb, cluster_fetched_at, created_at)` with 6h TTL. Per-payload `fetched_at` so a failed risk fetch ($0.002) doesn't burn the wallet-graph cache ($0.010) and vice versa.
+- Cache-first lookup — same seller across 50 listings should hit SolEnrich once. **This is the margin lever.** Without caching, cost per cold-only scan exceeds per-call revenue.
 - Graceful degradation — if SolEnrich is down or `SOLANA_PRIVATE_KEY` unset, response includes the listings but seller_risk/seller_cluster come back as `{ unavailable: true }`. Mirror the pattern from `wallet-insight`.
-- Wash-trade filter — when `seller_cluster.wash_trade_flag === true`, drop the opportunity from results by default; add `include_wash_trades: true` request flag to expose them anyway.
+- Wash-trade filter — when `seller_cluster.wash_trade_flag === true` (or whatever the live shape ends up calling it — schema not in the public OpenAPI), drop the opportunity from results by default; add `include_wash_trades: true` request flag to expose them anyway.
 
-**Cost math** (with caching working):
-- Cold seller: $0.02 (due-diligence) + $0.01 (wallet-graph) = $0.03 SolEnrich cost
-- 50-listing arbitrage scan averaging 5 unique sellers: 5 × $0.03 = $0.15 SolEnrich, 50 × $0.005 = $0.25 revenue → $0.10 margin
-- Warm cache (most sellers seen in last 6h): near-zero SolEnrich cost per call
-- If margin compresses below $0.05/call in practice, raise endpoint price to $0.008 or tighten cache TTL upward
+**Cost math** (revised against the corrected endpoint choice):
+- Cold seller: $0.002 (`enrich-wallet-light`) + $0.010 (`wallet-graph`) = **$0.012 SolEnrich cost** (down from the original $0.030 plan against `due-diligence`)
+- Per-call revenue on `rwa-arbitrage`: $0.005 (one POST = one price)
+- 50-listing scan, all unique sellers, all cold: 50 × $0.012 = $0.60 cost / $0.005 revenue = **loss of $0.595**. Cache is mandatory.
+- 50-listing scan, 5 unique sellers (typical recurrence), all cold: 5 × $0.012 = $0.060 cost / $0.005 revenue = still a loss. Cache is mandatory across calls too.
+- 50-listing scan, 5 unique sellers, warm cache: ~$0 cost / $0.005 revenue = $0.005 profit per call. The cache hit rate is the entire business — without ≥90% hit rate on cold seller calls, raise the per-call price or move to per-result pricing.
+- **Decision deferred to Step 4f:** per-call vs per-result pricing. Per-result (e.g. $0.0015 per opportunity returned) scales revenue with SolEnrich costs and matches the original plan math; per-call is simpler for bots. Choose at endpoint-build time based on real seller-recurrence sampling.
 
 **Exit:** Returns ≥5 plausible opportunities in any 24h window at 10% threshold, wash-trade cluster correctly filtered in ≥1 documented case.
 

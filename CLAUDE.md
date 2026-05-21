@@ -36,12 +36,30 @@ CardEx is that oracle. Solana-native, x402-gated, agent-first.
 | Source | Pokemon | MTG | Shared |
 |---|---|---|---|
 | Catalog seed | pokemontcg.io | Scryfall (bulk download) | — |
-| TCGPlayer pricing | Yes | Yes | Yes |
-| eBay sold listings | Yes | Yes | Yes |
-| CardMarket (EU) | Yes | Yes | Yes |
-| Card Kingdom buylist | — | Yes (MTG-specific) | — |
-| MTGO prices | — | Yes (MTG-specific) | — |
+| TCGPlayer pricing (raw) | Yes (via pokemontcg.io) | Yes (via Scryfall) | — |
+| CardMarket trend (raw) | Yes (via pokemontcg.io) | Yes (via Scryfall) | — |
+| PSA graded prices | Yes (Pokemon Price Tracker) | — | — |
+| CGC / BGS graded | Planned (Pokemon Price Tracker) | — | — |
+| eBay sold listings | Planned | Planned | Yes |
+| Card Kingdom buylist | — | Deferred (needs scraping) | — |
+| MTGO prices | — | Yes (Cardhoarder CSV) | — |
 | Japanese market | Mercari JP | Hareruya (scrape) | — |
+
+#### Pokemon Price Tracker (graded prices) — tier policy
+
+[pokemonpricetracker.com](https://www.pokemonpricetracker.com/pokemon-card-price-api) is the source for graded PSA/CGC/BGS Pokemon prices, sourced from eBay completed listings. The endpoint shape matches our schema: `card_id` = `{set_code}-{card_number}` = our `collectibles.external_id`. Adapter lives at `src/lib/ingestion/pokemon-price-tracker.ts`.
+
+| Tier | Cost | Daily credits | Req/min | Commercial use | When |
+|---|---|---|---|---|---|
+| Free | $0 | 100 | 60 | **No** | Dev / smoke testing only |
+| API | $9.99/mo | 20,000 | 60 | **No** | Never — non-commercial blocks our use case |
+| Business | $99/mo | 200,000 | 500 | Yes (with licensing) | **Required before mainnet flip** |
+
+**Key constraints:**
+- Free-tier coverage is sparse (80 lookups/day under a 100/day cap leaves 20 for ad-hoc). The cron prioritizes cards with active Collector Crypt listings — meaningful coverage will track listings, not catalog breadth.
+- The adapter does **not** call this API on the hot path. Graded prices are pre-ingested into `price_points` with `source='pokemonpricetracker_psa'` and queried locally from `rwa-fair-value` / `rwa-arbitrage`. Bot latency is unaffected by upstream throttling.
+- **Known gap:** the v0 adapter only wired the PSA endpoint. The vendor advertises PSA + CGC + BGS support; the CGC/BGS endpoint shapes were not in the public docs at integration time. Until they're added, CGC- and BGS-graded mints fall back to raw paper pricing in `rwa-fair-value` and are surfaced as `condition_basis: "raw_fallback"`.
+- On the Business tier, full nightly refresh of the 16,380 Pokemon catalog takes ~33 min at 500 req/min. Stale by up to 24h — acceptable for the arbitrage cadence we sell, not for a millisecond push feed.
 
 ## Tech Stack
 
@@ -202,16 +220,24 @@ All endpoints accept a `game` parameter (`pokemon` | `mtg`).
 ### Phase 8 SolEnrich Integration (Load-Bearing, Required)
 The agentic-commerce wedge depends on composing SolEnrich into the RWA oracle responses. These are **not** optional integrations — they're the differentiated value vs. Magic Eden's raw API.
 
-- **`rwa-arbitrage` enrichment** — Each opportunity carries `seller_risk` (SolEnrich `due-diligence`, $0.02) and `seller_cluster` (SolEnrich `wallet-graph`, $0.01). Wash-trade clusters are filtered out by default.
-- **`seller_intel` cache table** — 6h TTL on seller wallet enrichment. Same seller across 50 listings = 1 SolEnrich call. This caching is the margin lever; without it, the endpoint loses money per call.
-- **Extended client** — `src/lib/solenrich/client.ts` gains `dueDiligence(address)` and `walletGraph(address)` wrappers mirroring `enrichWalletLight()`.
+**Base URL:** `https://api.solenrich.com/entrypoints` (official, per the `/.well-known/x402` manifest). The older `solenrich-production.up.railway.app` host still serves the same endpoints but is not the canonical URL.
+
+**Endpoint choice for seller intel (corrected 2026-05-20):**
+- **`enrich-wallet-light`** ($0.002) — wallet risk. Returns `riskScore` + `riskLevel`. Originally the plan called for `due-diligence` here, but the OpenAPI spec confirms `due-diligence` takes a **token mint** and returns SAFE/CAUTION/RISKY on a token — not a wallet. CardEx already used `enrich-wallet-light` in `wallet-insight`; same wrapper feeds `seller_intel`.
+- **`wallet-graph`** ($0.010) — suspicious-cluster detection on a wallet address. Powers the wash-trade filter.
+- **`due-diligence`** ($0.020) — reserved for future tokenized-mint program vetting (e.g. flagging a compromised CC vault authority). Wrapper is `tokenDueDiligence(mint)`, not currently called in any hot path.
+
+**Architecture details:**
+- **`rwa-arbitrage` enrichment** — Each opportunity carries `seller_risk` (`enrich-wallet-light`) and `seller_cluster` (`wallet-graph`). Wash-trade clusters are filtered out by default.
+- **`seller_intel` cache table** — 6h TTL on seller wallet enrichment. Same seller across 50 listings = 1 SolEnrich call. Cold cost per seller = $0.012 ($0.002 light + $0.010 graph). The cache is the margin lever; see `docs/PHASE-8-PLAN.md` Step 4 for the cost math and per-call-vs-per-result pricing decision.
+- **Extended client** — `src/lib/solenrich/client.ts` exports `enrichWalletLight`, `walletGraph`, `tokenDueDiligence`. All graceful-degrade on missing `SOLANA_PRIVATE_KEY` or non-2xx responses.
 
 See `docs/PHASE-8-PLAN.md` Step 4 for full integration spec.
 
 ### On-Demand SolEnrich Composition (Build When Asked)
 These are speculative — build only if a Phase 8 design-partner bot specifically requests them. Don't add to roadmap until validated.
 
-- **`POST /api/v1/listing-due-diligence`** ($0.03-0.04) — Single-call bundle: CardEx fair-value + SolEnrich `due-diligence` + `wallet-graph`. Convenience pitch, tight margin, demand unproven.
+- **`POST /api/v1/listing-due-diligence`** ($0.015-0.025) — Single-call bundle: CardEx fair-value + SolEnrich `enrich-wallet-light` + `wallet-graph`. Convenience pitch, demand unproven. Originally scoped against `due-diligence` for the seller side (wrong endpoint — that's token-mint analysis); revised cost reflects the corrected seller-risk source.
 - **`/api/v1/feed-latest`** — Mirror of SolEnrich's daily brief, scoped to tokenized cards.
 - **Natural-language briefing output format** — Mirror SolEnrich's JSON / briefing / hybrid response modes. Only add when there's a non-bot consumer (LLM agent in Claude/Cursor).
 
@@ -307,7 +333,7 @@ Use these skills during development:
 
 **Build order:**
 1. Recon — read Collector Crypt + Phygitals programs, decide whether to index marketplace events directly or use Magic Eden's API as the read surface
-2. Pokemon paper-price ingestion (PriceCharting API as primary candidate — pokemontcg.io's tcgplayer field as fallback)
+2. Pokemon paper-price ingestion — pokemontcg.io for raw TCGPlayer/CardMarket + Pokemon Price Tracker for graded PSA/CGC/BGS (see `Pokemon Price Tracker` notes below). PriceCharting was an earlier candidate; dropped because their commercial-use terms are unclear and Pokemon Price Tracker's Business tier explicitly authorizes resale via x402.
 3. Onchain listings ingestion adapter — `src/lib/ingestion/collector-crypt.ts`, `src/lib/ingestion/phygitals.ts`, `src/lib/ingestion/magic-eden.ts`
 4. Listings table + freshness scoring in DB schema
 5. `POST /api/v1/rwa-fair-value` — input: mint or listing URL → paper-market price, onchain ask, spread %, freshness, grading distribution

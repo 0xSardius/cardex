@@ -14,13 +14,15 @@ import { SOLANA_DEVNET_CAIP2, SOLANA_MAINNET_CAIP2 } from "@x402/svm";
 import { createKeyPairSignerFromBytes } from "@solana/signers";
 import { base58 } from "@scure/base";
 import type {
-  DueDiligenceResponse,
+  TokenDueDiligenceResponse,
   EnrichWalletLightResponse,
   WalletGraphResponse,
 } from "./types";
 
-const SOLENRICH_BASE_URL =
-  "https://solenrich-production.up.railway.app/entrypoints";
+// Official base URL per solenrich.com /.well-known/x402 manifest.
+// The older solenrich-production.up.railway.app host still works (verified
+// 2026-05-20) but the canonical URL is api.solenrich.com.
+const SOLENRICH_BASE_URL = "https://api.solenrich.com/entrypoints";
 
 let paymentFetch: typeof globalThis.fetch | null = null;
 
@@ -107,15 +109,23 @@ export async function enrichWalletLight(
 
 /**
  * Call SolEnrich due-diligence endpoint via x402 ($0.020 USDC).
- * Comprehensive wallet security analysis — CardEx uses for `seller_risk`
- * in Phase 8 `rwa-arbitrage`.
+ *
+ * IMPORTANT: this endpoint analyzes a **token mint**, not a wallet.
+ * It returns "composite risk: token analysis + whale activity + holder
+ * concentration" with a SAFE/CAUTION/RISKY verdict per the published
+ * OpenAPI spec (api.solenrich.com/openapi.json).
+ *
+ * NOT used for seller wallet risk in `rwa-arbitrage` — that's
+ * `enrichWalletLight` which returns riskScore + riskLevel for ~10x less.
+ * Kept here for the future case where we want to vet a tokenized-card
+ * mint program's safety (e.g. compromised CC vault wallet authority).
  *
  * Returns null if x402 client is unconfigured, network fails, or
  * SolEnrich returns a non-2xx response.
  */
-export async function dueDiligence(
-  address: string
-): Promise<DueDiligenceResponse | null> {
+export async function tokenDueDiligence(
+  mint: string
+): Promise<TokenDueDiligenceResponse | null> {
   const paidFetch = await getPaymentFetch();
   if (!paidFetch) return null;
 
@@ -128,7 +138,7 @@ export async function dueDiligence(
           "Content-Type": "application/json",
           "User-Agent": "CardEx/0.1 (https://github.com/0xSardius/cardex)",
         },
-        body: JSON.stringify({ address }),
+        body: JSON.stringify({ mint }),
       }
     );
 
@@ -139,7 +149,7 @@ export async function dueDiligence(
       return null;
     }
 
-    return (await res.json()) as DueDiligenceResponse;
+    return (await res.json()) as TokenDueDiligenceResponse;
   } catch (err) {
     console.error("[solenrich] due-diligence error:", err);
     return null;

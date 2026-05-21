@@ -31,20 +31,22 @@ export interface SolEnrichErrorResponse {
 }
 
 // ─── due-diligence ($0.020) ─────────────────────────────────────────────────────
-// Comprehensive security analysis on a wallet. CardEx consumes the risk summary
-// fields per CLAUDE.md Phase 8 spec. Response shape is partially documented;
-// fields below are best-effort and any unknown extras pass through via the
-// index signature. Tighten once live responses are sampled in Step 4g.
+// Token-mint risk analysis (NOT wallet risk). Per the OpenAPI spec the
+// required input is `mint`, and the operation returns "composite risk:
+// token analysis + whale activity + holder concentration" with a
+// SAFE/CAUTION/RISKY verdict. Reserved here for future mint-program
+// vetting; seller wallet risk uses EnrichWalletLightResponse instead.
 
-export interface DueDiligenceRequest {
-  address: string;
+export interface TokenDueDiligenceRequest {
+  mint: string;
+  format?: "json" | "llm" | "both";
 }
 
-export interface DueDiligenceResponse {
-  address?: string;
+export interface TokenDueDiligenceResponse {
+  mint?: string;
+  verdict?: "SAFE" | "CAUTION" | "RISKY" | string;
   riskScore?: number;
   riskLevel?: string;
-  labels?: string[];
   findings?: unknown[];
   [k: string]: unknown;
 }
