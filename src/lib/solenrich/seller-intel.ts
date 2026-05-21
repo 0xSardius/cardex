@@ -161,3 +161,37 @@ export async function getSellerIntelBatch(
   }
   return results;
 }
+
+/**
+ * Heuristic check for wash-trade flags on a wallet-graph payload.
+ *
+ * The wallet-graph OpenAPI spec confirms the endpoint detects "suspicious
+ * clusters" but doesn't document the response field names. We probe the
+ * obvious candidates — camelCase + snake_case, boolean flags + string
+ * verdicts. Tighten once live responses are sampled (Step 4i or first
+ * real bot query).
+ *
+ * Returns true if any flag indicator is present; false if not; null if
+ * the cluster payload is missing entirely (caller treats as unknown).
+ */
+export function isWashTradeCluster(
+  cluster: WalletGraphResponse | null
+): boolean | null {
+  if (!cluster) return null;
+  // Direct boolean flags — most likely shape per CLAUDE.md plan.
+  if (cluster.washTradeFlag === true) return true;
+  const raw = cluster as Record<string, unknown>;
+  if (raw.wash_trade_flag === true) return true;
+  if (raw.washTrade === true) return true;
+  if (raw.wash_trade === true) return true;
+  if (raw.suspicious === true) return true;
+  // String verdict variants.
+  const verdict =
+    (typeof raw.verdict === "string" && raw.verdict.toLowerCase()) ||
+    (typeof raw.cluster_type === "string" && raw.cluster_type.toLowerCase()) ||
+    (typeof raw.clusterType === "string" && raw.clusterType.toLowerCase()) ||
+    "";
+  if (verdict.includes("wash")) return true;
+  if (verdict === "suspicious") return true;
+  return false;
+}

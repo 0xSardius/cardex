@@ -57,6 +57,11 @@ import { recordPayment } from "@/lib/x402/payments";
 import { getSolUsdRate } from "@/lib/oracle/sol-usd";
 import { fetchPaperPrice, gradedConditionFor } from "@/lib/pricing/paper-price";
 import { computeNetProfit } from "@/lib/marketplace/fees";
+import {
+  getSellerIntelBatch,
+  isWashTradeCluster,
+  type SellerIntel,
+} from "@/lib/solenrich/seller-intel";
 
 interface ArbitrageRequest {
   min_spread_percent?: number;
@@ -200,53 +205,92 @@ export async function POST(request: NextRequest) {
   }
 
   scored.sort((a, b) => b.profit.net_usd - a.profit.net_usd);
-  const top = scored.slice(0, limit);
 
-  const opportunities = top.map((s) => ({
-    mint: s.row.mint_address,
-    listing_id: s.row.listing_id,
-    marketplace: s.row.marketplace,
-    source: s.row.source,
-    listing_url: s.row.listing_url,
-    collectible: {
-      id: s.row.collectible_id,
-      name: s.row.collectible_name,
-      set: s.row.set_name,
-      set_code: s.row.set_code,
-      number: s.row.set_number,
-      grader: s.row.grader,
-      grade: s.row.grade ? parseFloat(s.row.grade) : null,
-      parallel: s.row.parallel,
-      image_url: s.row.image_url,
-    },
-    paper_price: s.paperPrice,
-    onchain: {
-      best_ask_usd: round2(s.askUsd),
-      best_ask_currency: s.askCurrency,
-      price_sol: s.row.price_sol ? parseFloat(s.row.price_sol) : null,
-      price_usdc: s.row.price_usdc ? parseFloat(s.row.price_usdc) : null,
-      seller: s.row.seller,
-      pda_address: s.row.pda_address,
-      observed_minutes_ago: Math.floor(
-        (Date.now() - new Date(s.row.observed_at).getTime()) / 60_000
-      ),
-    },
-    spread: {
-      percent: round2(s.spreadPct),
-      absolute_usd: round2(s.askUsd - (s.paperPrice.median_usd ?? 0)),
-      direction: "onchain_below_paper",
-    },
-    net_profit: s.profit,
-    // Step 4g wires the live cached lookup; Step 4h adds wash-trade
-    // filtering with `include_wash_trades` flag. Placeholders shaped
-    // exactly like the future live payload.
-    seller_risk: includeSellerRisk
-      ? { unavailable: true, reason: "enrichment not yet wired (Step 4g)" }
-      : { unavailable: true, reason: "include_seller_risk=false" },
-    seller_cluster: includeSellerRisk
-      ? { unavailable: true, reason: "enrichment not yet wired (Step 4g)" }
-      : { unavailable: true, reason: "include_seller_risk=false" },
-  }));
+  // Enrich up to `limit × 2` candidates with seller intel — buffer so
+  // wash-trade filtering still leaves us close to the requested limit.
+  // Floor at `limit` so we never enrich less than what we'd return.
+  // Hard ceiling at 50 to keep SolEnrich cost predictable.
+  const enrichBudget = Math.min(
+    Math.max(limit, limit * 2),
+    Math.max(limit, 50)
+  );
+  const enrichmentSlice = scored.slice(0, enrichBudget);
+
+  // Batch-fetch seller intel (cache-first, 6h TTL). Skipped when the
+  // caller opted out via include_seller_risk=false.
+  let intelMap: Map<string, SellerIntel> = new Map();
+  let intelUnavailable = false;
+  if (includeSellerRisk && enrichmentSlice.length > 0) {
+    const sellers = enrichmentSlice
+      .map((s) => s.row.seller)
+      .filter((x): x is string => !!x);
+    intelMap = await getSellerIntelBatch(sellers);
+    // If every intel returned `unavailable`, treat the whole feature as
+    // degraded for the response so the bot can see why.
+    intelUnavailable =
+      intelMap.size > 0 && Array.from(intelMap.values()).every((v) => v.unavailable);
+  }
+
+  // Wash-trade filter pass. We drop opportunities where wallet-graph
+  // flags the seller's cluster as washy, unless the caller opted in via
+  // include_wash_trades=true. `null` (unknown) is treated as "do not
+  // drop" — we'd rather surface a possibly-noisy opportunity than hide
+  // it on a missing signal.
+  const kept: typeof enrichmentSlice = [];
+  let washTradeDropped = 0;
+  for (const s of enrichmentSlice) {
+    const intel = s.row.seller ? intelMap.get(s.row.seller) : undefined;
+    const washy = intel?.cluster ? isWashTradeCluster(intel.cluster) : null;
+    if (washy === true && !includeWashTrades) {
+      washTradeDropped++;
+      continue;
+    }
+    kept.push(s);
+    if (kept.length >= limit) break;
+  }
+
+  const opportunities = kept.map((s) => {
+    const intel = s.row.seller ? intelMap.get(s.row.seller) : undefined;
+    const washy = intel?.cluster ? isWashTradeCluster(intel.cluster) : null;
+    return {
+      mint: s.row.mint_address,
+      listing_id: s.row.listing_id,
+      marketplace: s.row.marketplace,
+      source: s.row.source,
+      listing_url: s.row.listing_url,
+      collectible: {
+        id: s.row.collectible_id,
+        name: s.row.collectible_name,
+        set: s.row.set_name,
+        set_code: s.row.set_code,
+        number: s.row.set_number,
+        grader: s.row.grader,
+        grade: s.row.grade ? parseFloat(s.row.grade) : null,
+        parallel: s.row.parallel,
+        image_url: s.row.image_url,
+      },
+      paper_price: s.paperPrice,
+      onchain: {
+        best_ask_usd: round2(s.askUsd),
+        best_ask_currency: s.askCurrency,
+        price_sol: s.row.price_sol ? parseFloat(s.row.price_sol) : null,
+        price_usdc: s.row.price_usdc ? parseFloat(s.row.price_usdc) : null,
+        seller: s.row.seller,
+        pda_address: s.row.pda_address,
+        observed_minutes_ago: Math.floor(
+          (Date.now() - new Date(s.row.observed_at).getTime()) / 60_000
+        ),
+      },
+      spread: {
+        percent: round2(s.spreadPct),
+        absolute_usd: round2(s.askUsd - (s.paperPrice.median_usd ?? 0)),
+        direction: "onchain_below_paper",
+      },
+      net_profit: s.profit,
+      seller_risk: buildSellerRisk(intel, includeSellerRisk),
+      seller_cluster: buildSellerCluster(intel, washy, includeSellerRisk),
+    };
+  });
 
   const responseBody = {
     query: {
@@ -259,6 +303,8 @@ export async function POST(request: NextRequest) {
     },
     count: opportunities.length,
     candidate_count_scanned: candidates.length,
+    wash_trade_dropped: washTradeDropped,
+    seller_intel_unavailable: intelUnavailable,
     opportunities,
     sol_usd_rate: solUsdRate
       ? { rate: solUsdRate.rate, age_ms: solUsdRate.age_ms, source: solUsdRate.source }
@@ -286,6 +332,72 @@ export async function POST(request: NextRequest) {
       "Cache-Control": "public, max-age=60",
     },
   });
+}
+
+/**
+ * Build the seller_risk response object. Three states:
+ *   - Caller opted out                  → { unavailable, reason }
+ *   - Caller opted in but no payload    → { unavailable, reason }
+ *   - Caller opted in and SolEnrich OK  → flattened risk score + level + raw
+ */
+function buildSellerRisk(
+  intel: SellerIntel | undefined,
+  includeSellerRisk: boolean
+): Record<string, unknown> {
+  if (!includeSellerRisk) {
+    return { unavailable: true, reason: "include_seller_risk=false" };
+  }
+  if (!intel || intel.unavailable || !intel.risk) {
+    return {
+      unavailable: true,
+      reason: intel?.unavailable
+        ? "solenrich_unavailable"
+        : "no_cached_payload",
+    };
+  }
+  const risk = intel.risk;
+  return {
+    score: risk.riskScore ?? null,
+    level: risk.riskLevel ?? null,
+    labels: risk.behavioralLabels ?? [],
+    sol_balance: risk.solBalance ?? null,
+    fetched_at: intel.risk_fetched_at?.toISOString() ?? null,
+  };
+}
+
+/**
+ * Build the seller_cluster response object. Same three states as
+ * seller_risk, plus surfaces our wash_trade_flag derivation.
+ */
+function buildSellerCluster(
+  intel: SellerIntel | undefined,
+  washTradeFlag: boolean | null,
+  includeSellerRisk: boolean
+): Record<string, unknown> {
+  if (!includeSellerRisk) {
+    return { unavailable: true, reason: "include_seller_risk=false" };
+  }
+  if (!intel || intel.unavailable || !intel.cluster) {
+    return {
+      unavailable: true,
+      reason: intel?.unavailable
+        ? "solenrich_unavailable"
+        : "no_cached_payload",
+    };
+  }
+  const cluster = intel.cluster;
+  return {
+    cluster_id:
+      cluster.clusterId ??
+      (cluster as Record<string, unknown>).cluster_id ??
+      null,
+    member_count:
+      cluster.memberCount ??
+      (cluster as Record<string, unknown>).member_count ??
+      null,
+    wash_trade_flag: washTradeFlag,
+    fetched_at: intel.cluster_fetched_at?.toISOString() ?? null,
+  };
 }
 
 function resolveAskUsd(row: CandidateRow, solUsdRate: number | null): number | null {

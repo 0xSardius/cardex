@@ -52,15 +52,15 @@ async function getPaymentFetch(): Promise<typeof globalThis.fetch | null> {
 
     const signer = await createKeyPairSignerFromBytes(keyBytes);
 
-    const network =
-      process.env.SOLANA_NETWORK === "mainnet"
-        ? SOLANA_MAINNET_CAIP2
-        : SOLANA_DEVNET_CAIP2;
-
-    const client = new x402Client().register(
-      network,
-      new ExactSvmScheme(signer)
-    );
+    // Register BOTH networks so outbound payments work regardless of how
+    // SOLANA_NETWORK is set locally. SolEnrich's production endpoints
+    // require mainnet (CAIP `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`);
+    // single-network registration would 4xx with "No network/scheme
+    // registered" if the local env var disagreed. Strictly permissive —
+    // the same signer pays either network.
+    const client = new x402Client()
+      .register(SOLANA_MAINNET_CAIP2, new ExactSvmScheme(signer))
+      .register(SOLANA_DEVNET_CAIP2, new ExactSvmScheme(signer));
 
     paymentFetch = wrapFetchWithPayment(fetch, client);
     return paymentFetch;
