@@ -98,6 +98,16 @@ export const routesConfig = {
     description:
       "Paper-vs-onchain fair value for a single tokenized card mint",
   },
+  "POST /api/v1/rwa-arbitrage": {
+    accepts: {
+      scheme: "exact",
+      payTo: PAY_TO,
+      price: "$0.005",
+      network: NETWORK,
+    },
+    description:
+      "Sorted list of active onchain listings underpriced vs paper-market median, with optional seller risk + cluster enrichment",
+  },
 };
 
 export { resourceServer, NETWORK, PAY_TO };
