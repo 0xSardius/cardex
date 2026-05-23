@@ -1,6 +1,65 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-05-19 → 2026-05-21
+## Last Session: 2026-05-23 — Strategic checkpoint (no code)
+
+### Honest assessment after Step 4 close
+
+Code health: green. Validation health: red. Phase 8 build is ~85% structurally done but **zero outreach has happened**, which is exactly the failure mode the original plan warned against ("Anything past Week 6 with no paying user is a signal to step back, not push harder"). We are at Phase 8 ~Week 5 with no market signal.
+
+### Three framings identified as stronger than "Solana arbitrage bot oracle"
+
+Same backend, different positioning. The endpoints we shipped support all three without code changes:
+
+1. **Wallet intelligence for tokenized RWA holders** — cleanest CardEx × SolEnrich composition. "What does this wallet hold, what's it worth, who is this person, what are they likely to do next." Needs a new `POST /api/v1/wallet-portfolio` endpoint (Helius DAS + existing fair-value + SolEnrich wallet-insight). 2-3 days work. **Highest-value audience.**
+2. **MCP / LLM agent integration** — cheapest to ship (1-2 days). Wraps existing x402 endpoints as a CardEx MCP server for Claude Desktop / Cursor. SolEnrich already has one. Lower per-query revenue but real growing audience. **Cheapest validation path.**
+3. **Premium provenance / fairness oracle for institutional buyers** — high-touch sales, year-out market. Don't outbound; react to inbound only.
+
+### Execution strategy (decided 2026-05-23)
+
+Sequence is critical — DO NOT build all three speculatively.
+
+**Week 1 (next session):**
+- MCP server scaffold (~200 lines, wraps existing endpoints). Decide auth: prefer free-tier proxy that pays from CardEx-owned wallet (low cost, removes friction) over user-bring-your-own-wallet.
+- Three outreach drafts in parallel — different angles, different channels:
+  - Arbitrage → 2-3 Solana NFT trader Discords (DM operators, not blast)
+  - MCP → r/ClaudeAI, X post w/ Cursor demo, Anthropic MCP directory
+  - Wallet intelligence → r/mtgfinance, r/PokemonInvesting, X w/ RWA Twitter
+- **Pre-outreach prereqs:** Pokemon Price Tracker key (Business tier $99/mo before launch — demo lies on free tier), mainnet agent wallet provisioned + funded, e2e test wallet-insight live to confirm SolEnrich payment flow.
+
+**Week 2:** Post all three, stagger 2-3 days apart. Track inbound DMs, signups, API key requests.
+
+**Week 3:** Signal-driven build. Only build the wallet-portfolio endpoint if Lane 1 shows life. Only finish Step 5 batch endpoint if Lane 3 (arbitrage) shows life.
+
+**Week 4:** Double down on whichever lane responded. Park the other two.
+
+### Abandon criteria (the hard part)
+
+- **End week 4, zero signal in any lane** → stop building new product surfaces. Maintain what's there. Project becomes a portfolio piece + the SolEnrich-CardEx duo narrative.
+- **End week 6, 1+ signal but no recurring usage** → positioning shift, not new code.
+- **End week 8, ≥1 recurring user** → wedge confirmed, plan Phase 9 (dogfood / autonomous trading).
+
+### Success metrics
+
+| Lane | Validated | Strong | Failure |
+|---|---|---|---|
+| MCP / LLM | 10+ installs, 1 substantive feedback | 100+ installs, 3+ active weekly | <5 installs in 2 weeks |
+| Wallet intel | 1 dashboard/platform DM asking for integration | 2+ paid integrations | Zero inbound after 2 rounds |
+| Arbitrage bot | 1 bot operator runs ≥100 paid calls | 3 active bot users | Zero bot users after Discord DMs |
+
+### Fast-resume checklist (next session)
+
+In priority order:
+1. **Sign up Pokemon Price Tracker** → drop `POKEMON_PRICE_TRACKER_API_KEY` in `.env` → `npm run ingest:pokemon-graded` → confirm `condition_basis: "psa-N"` flows through `rwa-fair-value`.
+2. **Provision mainnet agent wallet** (per existing go-live checklist) → set `SOLANA_PRIVATE_KEY` + `SOLANA_WALLET_ADDRESS` in Railway + local → fund with ~0.02 SOL + small USDC.
+3. **e2e test on mainnet** → `wallet-insight` endpoint live → confirms x402 outbound to SolEnrich works.
+4. **Scaffold cardex-mcp** — new repo or `mcp/` subfolder. Wraps `rwa-fair-value`, `rwa-arbitrage`, `wallet-insight`, `price`. ~200 lines.
+5. **Draft three outreach posts** before any goes live — picking the right framing is more impactful than polish.
+
+DO NOT start the wallet-portfolio endpoint until Lane 1 shows inbound interest. DO NOT build the batch fair-value endpoint until Lane 3 shows interest. **Outreach gates building, not the reverse.**
+
+---
+
+## Previous Session: 2026-05-19 → 2026-05-21
 
 ### Verify sequence (2026-05-19)
 
