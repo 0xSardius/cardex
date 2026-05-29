@@ -21,6 +21,7 @@ export default function DashboardLayout({
               <NavLink href="/search">Search</NavLink>
               <NavLink href="/arbitrage">Arbitrage</NavLink>
               <NavLink href="/mtgo-spread">MTGO Spread</NavLink>
+              <NavLink href="/demo">Demo</NavLink>
             </div>
           </div>
           <div className="flex items-center gap-3 font-[family-name:var(--font-geist-mono)] text-xs">
@@ -36,6 +37,7 @@ export default function DashboardLayout({
           <NavLink href="/search">Search</NavLink>
           <NavLink href="/arbitrage">Arbitrage</NavLink>
           <NavLink href="/mtgo-spread">MTGO</NavLink>
+          <NavLink href="/demo">Demo</NavLink>
         </div>
       </nav>
 
