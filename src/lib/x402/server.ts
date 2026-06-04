@@ -7,8 +7,17 @@ import { x402ResourceServer } from "@x402/next";
 import { registerExactSvmScheme } from "@x402/svm/exact/server";
 import { SOLANA_DEVNET_CAIP2, SOLANA_MAINNET_CAIP2 } from "@x402/svm";
 
-// Payment destination — your Solana wallet that receives USDC
-const PAY_TO = process.env.SOLANA_WALLET_ADDRESS!;
+// Payment destination — your Solana wallet that receives USDC.
+// Missing this env var makes @x402/next throw an opaque 500 on EVERY gated
+// route (it can't build a payment challenge without a payTo). Fail loud here
+// so the cause shows up in logs instead of a blank "Internal Server Error".
+if (!process.env.SOLANA_WALLET_ADDRESS) {
+  console.error(
+    "[x402] SOLANA_WALLET_ADDRESS is not set — all x402-gated routes will 500. " +
+      "Set it in the environment (Railway dashboard / .env) and redeploy."
+  );
+}
+const PAY_TO = process.env.SOLANA_WALLET_ADDRESS ?? "";
 
 // Use devnet by default, mainnet in production
 type Network = `${string}:${string}`;
