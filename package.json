@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
+    "@coinbase/x402": "^2.1.0",
     "@lucid-agents/payments": "^2.5.0",
     "@lucid-agents/wallet": "^0.6.2",
     "@neondatabase/serverless": "^1.0.2",

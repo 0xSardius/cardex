@@ -4,6 +4,8 @@
  */
 
 import { x402ResourceServer } from "@x402/next";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { facilitator as cdpFacilitator } from "@coinbase/x402";
 import { registerExactSvmScheme } from "@x402/svm/exact/server";
 import { SOLANA_DEVNET_CAIP2, SOLANA_MAINNET_CAIP2 } from "@x402/svm";
 
@@ -25,8 +27,16 @@ const NETWORK: Network = (process.env.SOLANA_NETWORK === "mainnet"
   ? SOLANA_MAINNET_CAIP2
   : SOLANA_DEVNET_CAIP2) as Network;
 
-// Create the resource server (facilitator handled internally by @x402/next)
-const resourceServer = new x402ResourceServer();
+// The default facilitator (facilitator.x402.org) supports Solana DEVNET "exact"
+// but NOT mainnet — on mainnet every gated route 500s at proxy init with
+// "Facilitator does not support scheme \"exact\" on network solana:5eykt4...".
+// The Coinbase CDP facilitator supports Solana mainnet "exact" (it reads
+// CDP_API_KEY_ID + CDP_API_KEY_SECRET from env). Mirror SolEnrich's setup.
+// Devnet/local keeps the default facilitator so dev needs no CDP keys.
+const resourceServer =
+  process.env.SOLANA_NETWORK === "mainnet"
+    ? new x402ResourceServer(new HTTPFacilitatorClient(cdpFacilitator))
+    : new x402ResourceServer();
 
 // Register Solana payment scheme
 registerExactSvmScheme(resourceServer);
