@@ -123,7 +123,7 @@ function Hero() {
 
         {/* Subhead */}
         <p className="animate-fade-up delay-300 mt-6 text-lg sm:text-xl text-[var(--cx-text-dim)] max-w-2xl mx-auto leading-relaxed">
-          Paper-market truth meets onchain marketplace state. The Solana-native oracle trading agents query per call to spot tokenized cards mispriced against paper — Collector Crypt, Phygitals, and Magic Eden listings vs. TCGPlayer, CardMarket, and MTGO.
+          Paper-market truth meets onchain marketplace state. The Solana-native oracle trading agents query per call to spot tokenized cards mispriced against paper — Collector Crypt listings on Magic Eden vs. TCGPlayer, CardMarket, and MTGO.
         </p>
 
         {/* CTA buttons */}
@@ -155,12 +155,10 @@ function Hero() {
 function Problem() {
   const platforms = [
     "Collector Crypt",
-    "Phygitals",
     "Magic Eden",
     "TCGPlayer",
     "CardMarket",
-    "MTGO / Cardhoarder",
-    "eBay",
+    "MTGO",
   ];
 
   return (
@@ -252,7 +250,7 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/wallet-insight",
       price: "$0.005",
-      description: "Wallet intelligence: tokenized-card holdings, portfolio value, and SolEnrich risk score — composed in one call. Agent-to-agent x402 (CardEx pays SolEnrich under the hood).",
+      description: "Wallet intelligence: SolEnrich risk score + portfolio, plus the wallet's CardEx payment history — composed in one call. Agent-to-agent x402 (CardEx pays SolEnrich under the hood).",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },
@@ -268,7 +266,7 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/arbitrage",
       price: "$0.005",
-      description: "Cross-market paper arbitrage scanner. Detects US/EU spreads, buylist premiums, and MTGO-to-paper gaps — the leading-indicator depth no onchain marketplace has.",
+      description: "Cross-market paper arbitrage scanner. Detects US/EU spreads (TCGPlayer USD vs CardMarket EUR) for MTG and Pokémon — the cross-market paper depth no onchain marketplace has.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },
@@ -276,9 +274,9 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/grade",
       price: "$0.01",
-      description: "AI vision-based grade estimation. Upload a card image, get PSA/BGS probability distribution and grading ROI.",
-      tag: "SOON",
-      tagColor: "var(--cx-text-muted)",
+      description: "AI vision-based grade estimation. Upload a card image, get a PSA/BGS-scale grade estimate with per-criteria sub-scores (centering, corners, edges, surface) and grading ROI.",
+      tag: "BETA",
+      tagColor: "var(--cx-cyan)",
     },
   ];
 
@@ -338,9 +336,9 @@ function Endpoints() {
 /* ─── STATS ─── */
 function Stats() {
   const stats = [
-    { value: "$124.5M", label: "Monthly Volume", sub: "Tokenized cards onchain" },
+    { value: "$124.5M", label: "Market / Month", sub: "Tokenized-card volume (Aug '25)" },
     { value: "110K+", label: "Cards Indexed", sub: "MTG + Pokémon" },
-    { value: "322K+", label: "Paper Price Points", sub: "USD, EUR, MTGO Tix" },
+    { value: "380K+", label: "Paper Price Points", sub: "USD, EUR, MTGO Tix" },
     { value: "$0.001", label: "Min Query Cost", sub: "USDC on Solana" },
   ];
 
@@ -450,13 +448,11 @@ network: solana mainnet  # $0.002 USDC`,
       title: "Get your data",
       desc: "Resubmit with the signed payment proof. Receive paper-market truth and onchain state, reconciled, instantly.",
       code: `{
-  "card": "Raichu — XY Evolutions #49 (PSA 8)",
-  "paper_price": 41.20,
-  "onchain_ask": 33.00,
-  "spread": "-19.9%",
-  "seller_risk": "low",
-  "freshness": "2m",
-  "sources": ["pokemontcg","magic-eden","solenrich"]
+  "mint": "4Uzajig8...",
+  "collectible": { "name": "Raichu", "set": "XY Evolutions", "number": "49" },
+  "paper_price": { "median_usd": 41.20, "condition_basis": "raw" },
+  "onchain": { "best_ask_usd": 33.00, "marketplace": "M2", "fresh_minutes": 2 },
+  "spread": { "percent": -19.9, "direction": "onchain_below_paper" }
 }`,
     },
   ];
