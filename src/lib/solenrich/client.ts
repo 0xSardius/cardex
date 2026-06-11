@@ -100,11 +100,51 @@ export async function enrichWalletLight(
       return null;
     }
 
-    return (await res.json()) as EnrichWalletLightResponse;
+    return normalizeEnrichWalletLight(await res.json());
   } catch (err) {
     console.error("[solenrich] enrich-wallet-light error:", err);
     return null;
   }
+}
+
+/**
+ * SolEnrich's /invoke wraps results in `{ run_id, status, output }` and uses
+ * snake_case (`risk_score`, `risk_level`, `labels`, `top_holdings`). Every
+ * CardEx consumer expects the flat camelCase EnrichWalletLightResponse, so we
+ * normalize here. The previous blind `as` cast silently dropped every field —
+ * payment fired, data returned, and downstream reads were all `undefined`
+ * (seller_risk null, /demo/wallet blank). Defensive against both the wrapped
+ * and unwrapped shapes so a future SolEnrich change degrades, not breaks.
+ */
+function normalizeEnrichWalletLight(
+  raw: unknown
+): EnrichWalletLightResponse | null {
+  if (!raw || typeof raw !== "object") return null;
+  const env = raw as Record<string, unknown>;
+  if (typeof env.status === "string" && env.status !== "succeeded") return null;
+
+  const o = (env.output ?? env) as Record<string, unknown>;
+  if (!o || typeof o !== "object") return null;
+
+  const holdings = (o.top_holdings ?? o.tokenHoldings) as
+    | Array<Record<string, unknown>>
+    | undefined;
+
+  return {
+    address: (o.address as string) ?? "",
+    solBalance: (o.sol_balance ?? o.solBalance ?? 0) as number,
+    tokenHoldings: Array.isArray(holdings)
+      ? holdings.map((h) => ({
+          mint: (h.mint as string) ?? "",
+          symbol: (h.symbol as string) ?? "",
+          balance: (h.balance as number) ?? 0,
+          valueUsd: (h.usd_value ?? h.valueUsd ?? 0) as number,
+        }))
+      : [],
+    behavioralLabels: (o.labels ?? o.behavioralLabels ?? []) as string[],
+    riskScore: (o.risk_score ?? o.riskScore ?? 0) as number,
+    riskLevel: (o.risk_level ?? o.riskLevel ?? "") as string,
+  };
 }
 
 /**

@@ -32,9 +32,8 @@ function Hero() {
       </h1>
       <p className="mt-4 max-w-2xl text-base text-[var(--cx-text-dim)]">
         CardEx is the pricing oracle that tokenized-card trading agents use. Paper-market data from
-        Scryfall, TCGPlayer, CardMarket, Pokemon Price Tracker — joined live to Collector Crypt and
-        Magic Eden listings, with SolEnrich seller intel layered on top. Per-query via x402 USDC on
-        Solana.
+        Scryfall, TCGPlayer, and CardMarket — joined live to Collector Crypt and Magic Eden listings,
+        with SolEnrich seller intel layered on top. Per-query via x402 USDC on Solana.
       </p>
     </div>
   );
