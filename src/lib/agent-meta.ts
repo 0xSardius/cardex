@@ -13,7 +13,8 @@ export async function agentMeta() {
   const base = {
     name: "CardEx",
     version: "0.1.0",
-    description: "MTG market intelligence agent",
+    description:
+      "Onchain pricing oracle for tokenized collectibles — paper-market truth + Solana marketplace state",
     solanaAddress: process.env.SOLANA_WALLET_ADDRESS ?? null,
     registryAsset: process.env.AGENT_REGISTRY_ASSET ?? null,
     reputation: null as any,
@@ -53,7 +54,8 @@ export function agentMetaSync() {
   return {
     name: "CardEx",
     version: "0.1.0",
-    description: "MTG market intelligence agent",
+    description:
+      "Onchain pricing oracle for tokenized collectibles — paper-market truth + Solana marketplace state",
     solanaAddress: process.env.SOLANA_WALLET_ADDRESS ?? null,
     registryAsset: process.env.AGENT_REGISTRY_ASSET ?? null,
   };

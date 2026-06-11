@@ -42,7 +42,7 @@ function StatusBar() {
         <div className="flex items-center gap-3">
           <span className="font-bold tracking-wider text-[var(--cx-amber)]">CARDEX</span>
           <span className="text-[var(--cx-text-muted)]">|</span>
-          <span className="text-[var(--cx-text-dim)]">MARKET INTELLIGENCE AGENT</span>
+          <span className="text-[var(--cx-text-dim)]">TOKENIZED-CARD PRICING ORACLE</span>
         </div>
         <div className="hidden items-center gap-4 sm:flex">
           <span className="flex items-center gap-1.5">
@@ -59,16 +59,16 @@ function StatusBar() {
 /* ─── TICKER ─── */
 function Ticker() {
   const items = [
+    { name: "Charizard Base Set (PSA 10)", price: "$12,400", change: "+3.1%" },
+    { name: "Umbreon VMAX Alt (Eevee)", price: "$520.00", change: "+6.2%" },
+    { name: "Lugia 1st Ed (Neo Genesis)", price: "$3,200", change: "+2.7%" },
+    { name: "Moonbreon (Evolving Skies)", price: "$410.00", change: "-1.8%" },
     { name: "Black Lotus (Alpha)", price: "$285,000", change: "+2.3%" },
     { name: "Mox Sapphire (Beta)", price: "$12,800", change: "+1.1%" },
-    { name: "Underground Sea (Rev)", price: "$620.00", change: "-1.2%" },
-    { name: "Jace, the Mind Sculptor", price: "$89.99", change: "+4.7%" },
-    { name: "Ragavan, Nimble Pilferer", price: "$62.50", change: "+3.8%" },
     { name: "The One Ring (Foil)", price: "$185.00", change: "-0.5%" },
-    { name: "Force of Will (Alliances)", price: "$95.00", change: "+1.4%" },
+    { name: "Ragavan, Nimble Pilferer", price: "$62.50", change: "+3.8%" },
     { name: "Sheoldred, the Apocalypse", price: "$48.00", change: "+5.2%" },
-    { name: "Cavern of Souls (UMA)", price: "$52.00", change: "-2.1%" },
-    { name: "Wrenn and Six (MH1)", price: "$58.00", change: "+0.9%" },
+    { name: "Pikachu Illustrator", price: "$1,900,000", change: "+0.4%" },
   ];
 
   const doubled = [...items, ...items];
@@ -112,18 +112,18 @@ function Hero() {
         {/* Terminal prefix */}
         <div className="animate-fade-up delay-100 mb-6 font-[family-name:var(--font-geist-mono)] text-xs text-[var(--cx-amber-dim)] tracking-widest uppercase">
           <span className="text-[var(--cx-amber)] animate-blink mr-1">_</span>
-          Autonomous Agent &middot; x402 Micropayments &middot; Solana
+          Pricing Oracle &middot; x402 Micropayments &middot; Solana RWA
         </div>
 
         {/* Headline */}
         <h1 className="animate-fade-up delay-200 font-[family-name:var(--font-geist-sans)] text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05]">
           <span className="text-glow-amber text-[var(--cx-amber)]">Real-time</span>{" "}
-          MTG market intelligence
+          fair value for tokenized cards
         </h1>
 
         {/* Subhead */}
         <p className="animate-fade-up delay-300 mt-6 text-lg sm:text-xl text-[var(--cx-text-dim)] max-w-2xl mx-auto leading-relaxed">
-          The Bloomberg Terminal for Magic: The Gathering. Aggregated pricing from TCGPlayer, CardMarket, MTGO, and more — served via pay-per-query micropayments.
+          Paper-market truth meets onchain marketplace state. The Solana-native oracle trading agents query per call to spot tokenized cards mispriced against paper — Collector Crypt, Phygitals, and Magic Eden listings vs. TCGPlayer, CardMarket, and MTGO.
         </p>
 
         {/* CTA buttons */}
@@ -135,10 +135,10 @@ function Hero() {
             <span className="text-[var(--cx-text-muted)]">$</span> Query the API
           </a>
           <a
-            href="/search"
+            href="/demo"
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--cx-border)] bg-transparent px-6 py-3 font-[family-name:var(--font-geist-mono)] text-sm text-[var(--cx-text-dim)] transition-all hover:border-[var(--cx-border-bright)] hover:text-[var(--cx-text)]"
           >
-            Browse Dashboard
+            See Live Demo
           </a>
         </div>
 
@@ -154,12 +154,13 @@ function Hero() {
 /* ─── PROBLEM ─── */
 function Problem() {
   const platforms = [
+    "Collector Crypt",
+    "Phygitals",
+    "Magic Eden",
     "TCGPlayer",
     "CardMarket",
-    "Card Kingdom",
     "MTGO / Cardhoarder",
     "eBay",
-    "Hareruya",
   ];
 
   return (
@@ -172,11 +173,11 @@ function Problem() {
               The Problem
             </div>
             <h2 className="font-[family-name:var(--font-geist-sans)] text-3xl font-bold leading-tight">
-              $800M+ singles market.<br />
-              <span className="text-[var(--cx-text-dim)]">No programmatic access.</span>
+              $124.5M/mo tokenized.<br />
+              <span className="text-[var(--cx-text-dim)]">Prices that never agree.</span>
             </h2>
             <p className="mt-4 text-[var(--cx-text-dim)] leading-relaxed">
-              TCGPlayer closed their API to new apps. Prices are scattered across {platforms.length}+ platforms with different currencies, conditions, and 1M+ foil treatment SKUs. Traders manually cross-reference buylist spreads and Reserved List movements. Bots can&apos;t access any of it.
+              The same graded Charizard gets minted on Collector Crypt, listed on Magic Eden, and sells for a different number on TCGPlayer and eBay. Every platform knows only its own side — and they&apos;re all conflicted. Trading bots fly blind across the spread.
             </p>
 
             {/* Platform scatter */}
@@ -199,26 +200,26 @@ function Problem() {
               The Solution
             </div>
             <h2 className="font-[family-name:var(--font-geist-sans)] text-3xl font-bold leading-tight">
-              One API.<br />
-              <span className="text-[var(--cx-amber)]">Every source.</span>
+              One oracle.<br />
+              <span className="text-[var(--cx-amber)]">Both sides.</span>
             </h2>
             <p className="mt-4 text-[var(--cx-text-dim)] leading-relaxed">
-              CardEx aggregates all platforms into one treatment-aware API. Regular, foil, extended art, borderless, showcase — every SKU priced. Detect arbitrage in milliseconds. Pay per query with USDC — as low as $0.001.
+              CardEx prices every onchain listing against paper-market truth, nets out marketplace fees, and screens the seller via SolEnrich — so an agent sees real, post-fee edge. Per query, in USDC, as low as $0.001.
             </p>
 
             {/* Mini terminal */}
             <div className="mt-6 rounded-lg border border-[var(--cx-border)] bg-[var(--cx-black)] p-4 font-[family-name:var(--font-geist-mono)] text-xs">
               <div className="text-[var(--cx-text-muted)]">
-                {">"} POST /api/v1/price
+                {">"} POST /api/v1/rwa-fair-value
               </div>
               <div className="mt-1 text-[var(--cx-text-muted)]">
-                {">"} {`{ "card": "Black Lotus", "game": "mtg" }`}
+                {">"} {`{ "mint": "4Uzajig8..." }`}
               </div>
               <div className="mt-2 text-[var(--cx-green)]">
-                200 OK <span className="text-[var(--cx-text-muted)]">• paid $0.001 USDC</span>
+                200 OK <span className="text-[var(--cx-text-muted)]">• paid $0.002 USDC</span>
               </div>
               <div className="mt-1 text-[var(--cx-text)]">
-                {`{ "usd": 285000, "eur": 262400, "spread": "+8.6%" }`}
+                {`{ "paper": 41.20, "onchain_ask": 33.00, "spread": "-19.9%" }`}
               </div>
             </div>
           </div>
@@ -233,9 +234,33 @@ function Endpoints() {
   const endpoints = [
     {
       method: "POST",
+      path: "/api/v1/rwa-fair-value",
+      price: "$0.002",
+      description: "Paper-vs-onchain fair value for a single tokenized mint or listing URL. Returns paper-market price, best onchain ask, spread %, freshness, and grading basis.",
+      tag: "LIVE",
+      tagColor: "var(--cx-green)",
+    },
+    {
+      method: "POST",
+      path: "/api/v1/rwa-arbitrage",
+      price: "$0.005",
+      description: "Scan active Solana listings priced under the paper market by ≥X%. Net-profit sorted after marketplace fees, with seller risk + wash-trade clusters screened via SolEnrich.",
+      tag: "LIVE",
+      tagColor: "var(--cx-green)",
+    },
+    {
+      method: "POST",
+      path: "/api/v1/wallet-insight",
+      price: "$0.005",
+      description: "Wallet intelligence: tokenized-card holdings, portfolio value, and SolEnrich risk score — composed in one call. Agent-to-agent x402 (CardEx pays SolEnrich under the hood).",
+      tag: "LIVE",
+      tagColor: "var(--cx-green)",
+    },
+    {
+      method: "POST",
       path: "/api/v1/price",
       price: "$0.001",
-      description: "Exact + fuzzy card lookup across all indexed platforms. Returns USD, EUR, MTGO tix with cross-platform spreads. Reserved List and format legality included.",
+      description: "Paper-market price across TCGPlayer, CardMarket, and MTGO. Exact + fuzzy lookup for MTG and Pokémon, with cross-platform spreads, Reserved List, and format legality.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
     },
@@ -243,33 +268,9 @@ function Endpoints() {
       method: "POST",
       path: "/api/v1/arbitrage",
       price: "$0.005",
-      description: "Cross-platform arbitrage scanner. Detects TCGPlayer/CardMarket spreads, buylist premiums, MTGO-to-paper gaps, and Reserved List movements.",
+      description: "Cross-market paper arbitrage scanner. Detects US/EU spreads, buylist premiums, and MTGO-to-paper gaps — the leading-indicator depth no onchain marketplace has.",
       tag: "LIVE",
       tagColor: "var(--cx-green)",
-    },
-    {
-      method: "POST",
-      path: "/api/v1/mtgo-spread",
-      price: "$0.005",
-      description: "MTGO-to-paper price spread detector. Tix spikes are a leading indicator for paper price increases. Flags both directions.",
-      tag: "LIVE",
-      tagColor: "var(--cx-green)",
-    },
-    {
-      method: "POST",
-      path: "/api/v1/set/complete",
-      price: "$0.008",
-      description: "Set completion advisor. Shows missing cards, estimated cost to complete, and cheapest sources per card.",
-      tag: "LIVE",
-      tagColor: "var(--cx-green)",
-    },
-    {
-      method: "POST",
-      path: "/api/v1/portfolio/value",
-      price: "$0.002/card",
-      description: "Bulk portfolio valuation. Submit a list of cards, get aggregated market value with per-card breakdown.",
-      tag: "BETA",
-      tagColor: "var(--cx-cyan)",
     },
     {
       method: "POST",
@@ -291,7 +292,7 @@ function Endpoints() {
           Pay per query. <span className="text-[var(--cx-text-dim)]">Sub-cent pricing.</span>
         </h2>
         <p className="animate-fade-up delay-200 mt-3 text-[var(--cx-text-dim)] max-w-xl">
-          Every endpoint is gated by x402 micropayments on Solana. No API keys, no rate limits, no subscriptions. Just USDC.
+          Every endpoint is gated by x402 micropayments on Solana. No API keys, no rate limits, no subscriptions. Just USDC — and the facilitator sponsors the gas.
         </p>
 
         <div className="mt-12 space-y-3">
@@ -337,9 +338,9 @@ function Endpoints() {
 /* ─── STATS ─── */
 function Stats() {
   const stats = [
-    { value: "90K+", label: "Cards Indexed", sub: "Every MTG printing" },
-    { value: "322K+", label: "Price Points", sub: "USD, EUR, MTGO Tix" },
-    { value: "571", label: "Reserved List", sub: "Supply-locked cards tracked" },
+    { value: "$124.5M", label: "Monthly Volume", sub: "Tokenized cards onchain" },
+    { value: "110K+", label: "Cards Indexed", sub: "MTG + Pokémon" },
+    { value: "322K+", label: "Paper Price Points", sub: "USD, EUR, MTGO Tix" },
     { value: "$0.001", label: "Min Query Cost", sub: "USDC on Solana" },
   ];
 
@@ -372,24 +373,24 @@ function Stats() {
 function Audience() {
   const audiences = [
     {
-      label: "MTG Finance Traders",
-      hook: "TCGPlayer closed their API. CardEx is open and cheaper.",
-      icon: "↗",
-    },
-    {
-      label: "Bot & Agent Builders",
-      hook: "Programmatic MTG pricing without scraping. x402 native.",
+      label: "Arbitrage Bots",
+      hook: "Scan Magic Eden + Collector Crypt listings against paper-market truth. Mispricing surfaced in milliseconds, net of fees.",
       icon: "⚡",
     },
     {
-      label: "Store Owners",
-      hook: "Buylist arbitrage alerts across US, EU, and JP markets.",
-      icon: "☰",
+      label: "Trading Agents",
+      hook: "x402-native, no API keys. Pay per call in USDC. ERC-8004 identity + reputation on every response.",
+      icon: "↗",
     },
     {
-      label: "Collectors",
-      hook: "What's my collection worth? $0.002 per card to find out.",
+      label: "Wallet & Portfolio Tools",
+      hook: "Value tokenized holdings and screen counterparties — CardEx composes SolEnrich wallet risk in a single call.",
       icon: "◈",
+    },
+    {
+      label: "MTG Finance & Collectors",
+      hook: "The deepest cross-game offchain pricing on Solana. TCGPlayer, CardMarket, MTGO, Reserved List.",
+      icon: "☰",
     },
   ];
 
@@ -400,7 +401,7 @@ function Audience() {
           Built For
         </div>
         <h2 className="animate-fade-up delay-100 font-[family-name:var(--font-geist-sans)] text-3xl sm:text-4xl font-bold">
-          Humans and agents. <span className="text-[var(--cx-text-dim)]">Same API.</span>
+          Agents first. <span className="text-[var(--cx-text-dim)]">Humans welcome.</span>
         </h2>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2">
@@ -432,28 +433,30 @@ function HowItWorks() {
       num: "01",
       title: "Send a request",
       desc: "POST to any endpoint with your query. No auth headers — x402 handles payment inline.",
-      code: `curl -X POST https://cardex.up.railway.app/api/v1/price \\
-  -d '{"card":"Ragavan, Nimble Pilferer","game":"mtg"}'`,
+      code: `curl -X POST https://cardex.up.railway.app/api/v1/rwa-fair-value \\
+  -d '{"mint":"4Uzajig8c5AuR3UNRrg13ErDqbQiNz5YShZMPyGDUenh"}'`,
     },
     {
       num: "02",
       title: "Pay with USDC",
-      desc: "Get a 402 response with payment details. Your x402 client auto-signs a Solana USDC transfer.",
+      desc: "Get a 402 response with payment details. Your x402 client auto-signs a Solana USDC transfer — the facilitator sponsors the gas.",
       code: `HTTP/1.1 402 Payment Required
 x402-version: 2
-x402-scheme: exact-svm
-x402-price: 1000  # $0.001 USDC`,
+x402-scheme: exact (svm)
+network: solana mainnet  # $0.002 USDC`,
     },
     {
       num: "03",
       title: "Get your data",
-      desc: "Resubmit with the signed payment proof. Receive normalized, cross-platform pricing instantly.",
+      desc: "Resubmit with the signed payment proof. Receive paper-market truth and onchain state, reconciled, instantly.",
       code: `{
-  "card": "Ragavan, Nimble Pilferer (MH2)",
-  "treatment": "regular",
-  "prices": { "usd": 62.50, "eur": 54.80, "tix": 42.1 },
-  "spread": "+14.1%",
-  "sources": ["tcgplayer","cardmarket","mtgo"]
+  "card": "Raichu — XY Evolutions #49 (PSA 8)",
+  "paper_price": 41.20,
+  "onchain_ask": 33.00,
+  "spread": "-19.9%",
+  "seller_risk": "low",
+  "freshness": "2m",
+  "sources": ["pokemontcg","magic-eden","solenrich"]
 }`,
     },
   ];
@@ -505,11 +508,11 @@ function CTA() {
           Ready to query
         </div>
         <h2 className="animate-fade-up delay-100 font-[family-name:var(--font-geist-sans)] text-4xl sm:text-5xl font-bold">
-          Market data for{" "}
-          <span className="text-[var(--cx-amber)] text-glow-amber">every card.</span>
+          Price truth for{" "}
+          <span className="text-[var(--cx-amber)] text-glow-amber">every tokenized card.</span>
         </h2>
         <p className="animate-fade-up delay-200 mt-4 text-[var(--cx-text-dim)] text-lg">
-          Start querying for as little as $0.001 per request. No signup required — just USDC on Solana.
+          Point your agent at CardEx and pay per call — sub-cent, USDC on Solana, no signup. Paper-market depth and onchain state in one response.
         </p>
 
         <div className="animate-fade-up delay-400 mt-10 flex flex-col sm:flex-row gap-3 justify-center">
@@ -529,7 +532,7 @@ function CTA() {
 
         {/* Tech badges */}
         <div className="animate-fade-up delay-600 mt-12 flex flex-wrap gap-3 justify-center">
-          {["x402 Protocol", "Solana USDC", "ERC-8004 Identity", "Sub-cent Tx"].map((badge) => (
+          {["x402 Protocol", "Solana USDC", "ERC-8004 Identity", "SolEnrich Composed"].map((badge) => (
             <span
               key={badge}
               className="rounded-full border border-[var(--cx-border)] px-3 py-1 font-[family-name:var(--font-geist-mono)] text-[11px] text-[var(--cx-text-muted)]"
@@ -550,10 +553,10 @@ function Footer() {
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 sm:flex-row font-[family-name:var(--font-geist-mono)] text-xs text-[var(--cx-text-muted)]">
         <div className="flex items-center gap-2">
           <span className="font-bold text-[var(--cx-amber)]">CARDEX</span>
-          <span>Autonomous Market Intelligence</span>
+          <span>Onchain Pricing Oracle</span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Magic: The Gathering</span>
+          <span>Tokenized Collectibles &middot; Solana</span>
           <span className="text-[var(--cx-border)]">|</span>
           <span>Powered by x402</span>
         </div>

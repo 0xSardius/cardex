@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CardEx — Real-time MTG Market Intelligence",
+  title: "CardEx — Onchain Pricing Oracle for Tokenized Collectibles",
   description:
-    "The Bloomberg Terminal for Magic: The Gathering. Aggregated pricing from TCGPlayer, CardMarket, Card Kingdom, and MTGO — served via x402 micropayments on Solana.",
+    "Paper-market truth meets onchain marketplace state. The Solana-native pricing oracle that tokenized-card trading agents query per call via x402 — Collector Crypt, Phygitals, and Magic Eden listings priced against TCGPlayer, CardMarket, and MTGO.",
 };
 
 export default function RootLayout({
