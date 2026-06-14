@@ -1,6 +1,50 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-05-23 — Strategic checkpoint (no code)
+## Last Session: 2026-06-14 — Go-live fixes + full accuracy audit + strategy recalibration
+
+### TL;DR
+The site was **silently broken** for paid use and is now **live, accurate, and the SolEnrich integration actually works**. Strategy recalibrated: dogfood/trading (Phase 9) is the chosen direction but is **gated on a backtest that currently fails** (0 tradeable opportunities). Still **zero paying users**.
+
+### What shipped this session (all pushed + deployed + verified live)
+1. **Fixed the live 500.** Root cause: the default x402 facilitator (`facilitator.x402.org`) doesn't support Solana **mainnet** `exact` — every gated route 500'd. Fix: use Coinbase **CDP facilitator** on mainnet (`@coinbase/x402`, reads `CDP_API_KEY_ID`/`CDP_API_KEY_SECRET`). Commits `7af6118`, `3d8ccfb`, `203b3db` (boot-time guard so bad keys log+degrade instead of crashing).
+2. **Fixed stale deploy.** Railway was running a pre-Step-4 build (rwa-* + /demo 404'd). `railway up` now current.
+3. **Landing repositioned** MTG-terminal → RWA-oracle (`d817553`), then **accuracy-corrected** (`13a20b8`): dropped buylist/MTGO/Phygitals/eBay/Cardhoarder overclaims, fixed counts (380K price points, 110K cards).
+4. **Full-site audit** (`9927a83`): unpublished `/strategy` (internal GTM/token notes) + `/value-prop` (stale MTG pitch); removed Pokemon Price Tracker from `/demo` sources.
+5. **🔴 Critical bug fixed — BOTH SolEnrich endpoints.** `enrich-wallet-light` AND `wallet-graph` returned `{run_id,status,output:{snake_case}}` but code expected flat camelCase + never unwrapped `output` → every consumer read `undefined` (seller_risk null, /demo/wallet blank). Added `normalizeEnrichWalletLight` + `normalizeWalletGraph` (`9927a83`, `8b7000e`). **Verified live:** /demo/wallet now renders risk + labels; rwa-arbitrage seller_risk populates.
+6. **Proved agent-to-agent payment on mainnet** ($0.002 CardEx→SolEnrich, real). Tweet drafts ready (CardEx + SolEnrich QT pair); screenshot asset = `/demo/wallet?address=HaRn6167N9tRH3XazRYfKmioE4okKhhxJ56FDirUnSq4`.
+
+### Hard truths surfaced (the recalibration)
+- **Mint resolution is 16%** (70 of 448 mints map to a catalog card) → rwa-fair-value/arbitrage are blind to ~97% of CC's 2,199 listings.
+- **No graded paper prices loaded** (no PPT key) → graded slabs compared to raw paper always look *over*priced → **arbitrage backtest = 0 opportunities** (`scripts/backtest-arbitrage.ts`). The dogfood signal is structurally dead until both gaps close.
+- **Market structure insight:** one wallet (`HaRn…`, almost certainly CC's vault) = **82% of listings** (1,811/2,199). The "many independent sellers to arbitrage" thesis is weaker than assumed.
+- **What works today:** wallet-intel lane, MTG paper depth, SolEnrich composition, the live demos.
+
+### Active task list (created this session — `TaskList` to see)
+1. **Fix mint→catalog resolution** (free, critical path, no blockers) — Helius DAS + token-name parsing in `src/lib/ingestion/`. **START HERE.**
+2. Audit grader mix (PSA vs CGC/BGS) in listings — PPT only wires PSA.
+3. Ingest graded prices via **free** PPT tier — *needs user: free key at pokemonpricetracker.com → `POKEMON_PRICE_TRACKER_API_KEY`*.
+4. Re-run arbitrage backtest — the Phase 9 gate (prove/kill edge for ~$0).
+5. Decision gate: edge proven → $99 Business tier + Magic Eden execution + paper-trade; else pivot. **Don't spend/build execution before this.**
+6. Post CardEx + SolEnrich tweet pair (parallel, free validation) — *needs user: handles + post*.
+
+### Recommended direction
+Critical path = **task #1 (mint resolution)**, free and unblocks everything. In parallel, two near-free validation levers before any spend: the **graded backtest** (#3→#4, proves dogfood edge) and the **tweet** (#6, tests external demand). Only at the **decision gate (#5)** commit the $99 + execution code.
+
+### Env / infra state
+- Live: `cardex.up.railway.app` (Railway project `melodious-cooperation`/production/Cardex; deploy via `railway up`; CLI login expires — re-`railway login` in a real terminal if "Unauthorized").
+- Agent wallet `DUkW7nQibQxAuJx1viLj6PmP9pn4gzBvqF66pJdkCd6L` (in local `.env`) — ~$4.25 USDC, 0 SOL (x402 is gasless via CDP fee-payer). Doubles as revenue payTo + signer.
+- Set: `SOLANA_NETWORK=mainnet`, `SOLANA_RPC_URL`, `SOLANA_WALLET_ADDRESS`, `SOLANA_PRIVATE_KEY`, `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, `ANTHROPIC_API_KEY`, `CRON_SECRET` (Railway + local).
+- **Missing:** `POKEMON_PRICE_TRACKER_API_KEY` (the only thing blocking the graded backtest).
+- Useful scripts: `test-solenrich-live.ts`, `test-walletgraph-live.ts`, `top-sellers.ts`, `audit-landing-claims.ts`, `backtest-arbitrage.ts`.
+
+### Resume next session
+1. `TaskList` → start **task #1 (mint resolution)**.
+2. If user got the PPT key → tasks #3 → #4 (the real backtest).
+3. Tweet (#6) can go anytime — drafts in conversation, demo asset live.
+
+---
+
+## Previous Session: 2026-05-23 — Strategic checkpoint (no code)
 
 ### Honest assessment after Step 4 close
 
