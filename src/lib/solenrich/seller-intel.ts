@@ -163,35 +163,30 @@ export async function getSellerIntelBatch(
 }
 
 /**
- * Heuristic check for wash-trade flags on a wallet-graph payload.
+ * Wash-trade check against a wallet-graph payload.
  *
- * The wallet-graph OpenAPI spec confirms the endpoint detects "suspicious
- * clusters" but doesn't document the response field names. We probe the
- * obvious candidates — camelCase + snake_case, boolean flags + string
- * verdicts. Tighten once live responses are sampled (Step 4i or first
- * real bot query).
+ * Live shape (captured 2026-06-14): the signal is `clusters[].suspicious_pattern`
+ * (null = clean). normalizeWalletGraph() unwraps the SolEnrich envelope and
+ * derives `washTradeFlag`, so the normalized path is a one-liner. The fallback
+ * branch handles any pre-fix cached payload that still carries the raw
+ * `{ ...output: { clusters[] } }` envelope (seller_intel cache TTL is 6h).
  *
- * Returns true if any flag indicator is present; false if not; null if
- * the cluster payload is missing entirely (caller treats as unknown).
+ * Returns true if a suspicious cluster is present; false if clean; null if the
+ * cluster payload is missing entirely (caller treats as unknown).
  */
 export function isWashTradeCluster(
   cluster: WalletGraphResponse | null
 ): boolean | null {
   if (!cluster) return null;
-  // Direct boolean flags — most likely shape per CLAUDE.md plan.
-  if (cluster.washTradeFlag === true) return true;
-  const raw = cluster as Record<string, unknown>;
-  if (raw.wash_trade_flag === true) return true;
-  if (raw.washTrade === true) return true;
-  if (raw.wash_trade === true) return true;
-  if (raw.suspicious === true) return true;
-  // String verdict variants.
-  const verdict =
-    (typeof raw.verdict === "string" && raw.verdict.toLowerCase()) ||
-    (typeof raw.cluster_type === "string" && raw.cluster_type.toLowerCase()) ||
-    (typeof raw.clusterType === "string" && raw.clusterType.toLowerCase()) ||
-    "";
-  if (verdict.includes("wash")) return true;
-  if (verdict === "suspicious") return true;
-  return false;
+  // Normalized shape (post-fix): explicit derived flag.
+  if (typeof cluster.washTradeFlag === "boolean") return cluster.washTradeFlag;
+  // Defensive fallback for legacy/raw cached payloads (envelope not unwrapped).
+  const raw = cluster as unknown as Record<string, unknown>;
+  const out = (raw.output ?? raw) as Record<string, unknown>;
+  const clusters = Array.isArray(out.clusters)
+    ? (out.clusters as Array<Record<string, unknown>>)
+    : [];
+  return clusters.some(
+    (c) => c.suspicious_pattern != null || c.suspiciousPattern != null
+  );
 }

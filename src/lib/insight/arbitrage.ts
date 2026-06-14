@@ -291,15 +291,12 @@ function buildSellerCluster(
     };
   }
   const cluster = intel.cluster;
+  const primary = cluster.clusters?.[0] ?? null;
   return {
-    cluster_id:
-      cluster.clusterId ??
-      (cluster as Record<string, unknown>).cluster_id ??
-      null,
-    member_count:
-      cluster.memberCount ??
-      (cluster as Record<string, unknown>).member_count ??
-      null,
+    cluster_count: cluster.clusters?.length ?? 0,
+    member_count: primary ? primary.members.length : null,
+    node_count: cluster.nodeCount ?? null,
+    suspicious_pattern: cluster.suspiciousPattern ?? null,
     wash_trade_flag: washTradeFlag,
     fetched_at: intel.cluster_fetched_at?.toISOString() ?? null,
   };

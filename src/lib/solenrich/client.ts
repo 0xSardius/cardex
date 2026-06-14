@@ -17,6 +17,7 @@ import type {
   TokenDueDiligenceResponse,
   EnrichWalletLightResponse,
   WalletGraphResponse,
+  WalletGraphCluster,
 } from "./types";
 
 // Official base URL per solenrich.com /.well-known/x402 manifest.
@@ -230,9 +231,50 @@ export async function walletGraph(
       return null;
     }
 
-    return (await res.json()) as WalletGraphResponse;
+    return normalizeWalletGraph(await res.json());
   } catch (err) {
     console.error("[solenrich] wallet-graph error:", err);
     return null;
   }
+}
+
+/**
+ * Same envelope/casing problem as enrich-wallet-light: wallet-graph returns
+ * `{ run_id, status, output: { address, node_count, edge_count, nodes[],
+ * edges[], clusters: [{ members[], interaction_density, suspicious_pattern }] } }`.
+ * The wash-trade signal is `clusters[].suspicious_pattern` (null = clean) —
+ * NOT a top-level `washTradeFlag`, which the old type guessed and never found.
+ * Unwrap `output`, map to WalletGraphResponse, and derive the wash flag.
+ */
+function normalizeWalletGraph(raw: unknown): WalletGraphResponse | null {
+  if (!raw || typeof raw !== "object") return null;
+  const env = raw as Record<string, unknown>;
+  if (typeof env.status === "string" && env.status !== "succeeded") return null;
+
+  const o = (env.output ?? env) as Record<string, unknown>;
+  if (!o || typeof o !== "object") return null;
+
+  const rawClusters = Array.isArray(o.clusters)
+    ? (o.clusters as Array<Record<string, unknown>>)
+    : [];
+  const clusters: WalletGraphCluster[] = rawClusters.map((c) => ({
+    members: Array.isArray(c.members) ? (c.members as string[]) : [],
+    interactionDensity: (c.interaction_density ??
+      c.interactionDensity ??
+      null) as number | null,
+    suspiciousPattern: (c.suspicious_pattern ??
+      c.suspiciousPattern ??
+      null) as string | null,
+  }));
+  const suspiciousPattern =
+    clusters.find((c) => c.suspiciousPattern != null)?.suspiciousPattern ?? null;
+
+  return {
+    address: (o.address as string) ?? null,
+    nodeCount: (o.node_count ?? o.nodeCount ?? null) as number | null,
+    edgeCount: (o.edge_count ?? o.edgeCount ?? null) as number | null,
+    clusters,
+    washTradeFlag: suspiciousPattern != null,
+    suspiciousPattern,
+  };
 }

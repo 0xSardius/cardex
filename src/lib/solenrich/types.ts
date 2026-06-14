@@ -59,11 +59,24 @@ export interface WalletGraphRequest {
   address: string;
 }
 
+export interface WalletGraphCluster {
+  members: string[];
+  interactionDensity: number | null;
+  /** SolEnrich's wash/sybil signal. null = clean. Non-null names the pattern. */
+  suspiciousPattern: string | null;
+}
+
+// Live shape (captured 2026-06-14) is enveloped + snake_case:
+//   { run_id, status, output: { address, node_count, edge_count, nodes[],
+//     edges[], clusters: [{ members[], interaction_density, suspicious_pattern }] } }
+// normalizeWalletGraph() in client.ts unwraps `output` and maps to this.
 export interface WalletGraphResponse {
-  address?: string;
-  clusterId?: string;
-  memberCount?: number;
-  washTradeFlag?: boolean;
-  members?: string[];
-  [k: string]: unknown;
+  address: string | null;
+  nodeCount: number | null;
+  edgeCount: number | null;
+  clusters: WalletGraphCluster[];
+  /** Derived: true if any cluster carries a non-null suspicious_pattern. */
+  washTradeFlag: boolean;
+  /** First non-null suspicious_pattern across clusters, for surfacing. */
+  suspiciousPattern: string | null;
 }
