@@ -136,6 +136,19 @@ function parseSetString(raw: string | null): {
     nonCodeParts.push(part);
   }
 
+  // Catch a language embedded mid-string rather than as a clean " - " part,
+  // e.g. "Pokemon Japanese SV3-Ruler of the Black Flame" or "Pokemon German".
+  // Only override the default — explicit "- English" parts already set 'en'.
+  if (language === "en") {
+    const lower = raw.toLowerCase();
+    for (const [word, code] of Object.entries(LANGUAGE_MAP)) {
+      if (new RegExp(`\\b${word}\\b`).test(lower)) {
+        language = code;
+        break;
+      }
+    }
+  }
+
   const setName = nonCodeParts.length > 0
     ? normalizeSetName(nonCodeParts.join(" - "))
     : null;
@@ -158,12 +171,22 @@ function normalizeSetName(name: string): string {
 }
 
 /**
- * Strip trailing total from a card number — e.g. "19/146" → "19".
- * Our DB stores pokemontcg.io's bare numbers without totals.
+ * Normalize a Collector Crypt serial into our catalog's card-number format.
+ *   - Strip trailing total:        "19/146" → "19"
+ *   - Strip leading zeros:         "059"    → "59"   (catalog stores bare numbers;
+ *                                                     CC zero-pads them)
+ *   - Strip zeros after an alpha prefix: "SV016" → "SV16", "TG01" → "TG1"
+ *     (subset codes are stored un-padded in pokemontcg.io)
+ * Pure-numeric and alphanumeric subset numbers are both handled; a lone "0"
+ * (no following digit) is preserved.
  */
 export function normalizeCardNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const idx = raw.indexOf("/");
-  const out = (idx >= 0 ? raw.slice(0, idx) : raw).trim();
+  let out = (idx >= 0 ? raw.slice(0, idx) : raw).trim();
+  // Pure leading zeros before a digit: "059" → "59".
+  out = out.replace(/^0+(?=\d)/, "");
+  // Zeros padding a digit run after an alpha prefix: "SV016" → "SV16".
+  out = out.replace(/^([A-Za-z]+)0+(?=\d)/, "$1");
   return out.length > 0 ? out : null;
 }

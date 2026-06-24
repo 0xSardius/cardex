@@ -1,6 +1,40 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-06-14 — Go-live fixes + full accuracy audit + strategy recalibration
+## Last Session: 2026-06-23 — Validation sprint + data-foundation rebuild (autonomous-trader thesis tested → weakened)
+
+### TL;DR
+Stepped back to **validate the direction before spending** (PPT API or capital). Rebuilt the rotted data foundation, built an honest cost model + free validation gates, and **the live data weakened the autonomous-trading thesis**. Pivoted to testing **Lane A demand** (the mispricing signal as a human lead) — the one thing never tested in CardEx's history. No capital deployed, PPT API NOT bought (correctly — see below).
+
+### Strategic arc
+- 4-track market research: tokenized-card arbitrage is real but THIN; "agents pay per call" is a ~2027 market; real money today = human subscriptions. Solana-only.
+- Two trader edges: **Edge A** (paper arb, our data moat, sellable signal) + **Edge B** (US-clean secondary resale on ME/Tensor). Redemption research: secondary buy/sell is US-clean (HIGH); CC buyback/gacha US-blocked.
+- `/validate-idea` verdict: **go-validate, not go-build** — demand never tested (0 paying users, 0 user conversations ever). Artifacts: `validation-cardex.html`, `.superstack/idea-context.md`.
+
+### Data foundation rebuilt — bot vision 3.2% → ~21.5% (trustworthy)
+Every prior backtest was scanning **rotten data**. Bugs found + fixed:
+- Leading-zero card numbers (`059`→`59`); Japanese↔English set-code collisions (clean + embedded language → wrong cards, e.g. JP Larvesta matched as EN Drilbur); month-stale paper prices (refreshed 66.5K pts); month-stale listings (473 dead expired / 473 new live).
+- Resolver now English-gated. **~25% of CC inventory is Japanese** → un-priceable on our English catalog (deferrable JP-source expansion).
+- New exports `buildResolutionContext`/`resolveAndStoreMint`; new `round-trip.ts` honest cost model.
+
+### The honest gates (FREE, no API spend) — verdicts
+- **Cost model:** redemption round-trip needs ~20% below paper on $1k cards (worse on cheap — shipping drag). Trade $300+ only.
+- **Insured-value gate** (`gate-insured-value.ts`): inventory is 95% sub-$100, **ZERO $300+ cards → Edge A (redemption arb) DEAD**.
+- **Onchain sale-comps** (`onchain-sale-comps.ts`, n=19 real ME sales): insured value is a decent AGGREGATE anchor (median realized/insured **0.93**) but NOISY per-card (p25 **0.41**, 26% clear <60% insured). Market thin: **~13 sales/day** whole collection (~8 usable). → **Edge B not a confident mechanical edge.**
+- **KEY INSIGHT:** the $9.99 PPT key gives graded PAPER prices (Edge-A benchmark, already dead) — NOT onchain resale prices (what Edge B needs). **Paying $9.99 would not unblock the live lane. Don't pay.**
+
+### Landed → Lane A demand test (chosen direction)
+- The noisy signal is fine as a HUMAN lead. `generate-leads.ts` → **triangulated** leads (below conservative floor of insured + paper, sources agree within 3×). Currently **6 honest leads** (thin, $21–52 each). Asset: `leads-report.html`.
+- **NEXT (user action, can't be automated):** post leads + outreach drafts (in chat history) to Collector Crypt / Magic Eden trader communities, r/PokeInvesting, X. Measure: anyone asking for access/feed = real pull. **Zero pull after 2 rounds = repoint CardEx's infra elsewhere** (the market thinness is fundamental).
+
+### Resume pointers
+- **Direction is OPEN** — decide after the demand test. If no pull → reconsider whether tokenized-Pokémon-on-Solana is too small/thin to build on.
+- Session scripts: `diagnose-mint-resolution(-2).ts`, `backfill-mints.ts`, `reresolve-mints.ts`, `gate-insured-value.ts`, `onchain-sale-comps.ts`, `generate-leads.ts`, `backtest-arbitrage-honest.ts`, `check-insured-vs-paper.ts`, `trace-*.ts`, `probe-token-names.ts`.
+- `TaskList` has the board (#3 EN/JP split, #4 token-name parser, #8 shadow mode, #9 alerts, #12 stale-listing re-ingest still open; resolution + gates done).
+- Did NOT pay PPT API. Did NOT deploy capital. Both correct per the data.
+
+---
+
+## Previous Session: 2026-06-14 — Go-live fixes + full accuracy audit + strategy recalibration
 
 ### TL;DR
 The site was **silently broken** for paid use and is now **live, accurate, and the SolEnrich integration actually works**. Strategy recalibrated: dogfood/trading (Phase 9) is the chosen direction but is **gated on a backtest that currently fails** (0 tradeable opportunities). Still **zero paying users**.

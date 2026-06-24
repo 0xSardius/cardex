@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CardEx — Validation Sprint</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141925; --panel2:#1b2230; --line:#273142;
+    --ink:#e6edf3; --mut:#9aa7b8; --dim:#6b7787;
+    --go:#3fb950; --warn:#d29922; --no:#f85149; --accent:#58a6ff; --pivot:#bc8cff;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code',Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:48px 24px 96px}
+  h1{font-size:30px;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--mut);margin:0 0 28px;font-size:14px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);
+    margin:36px 0 14px;font-weight:600}
+  .verdict{border-radius:14px;padding:24px 26px;margin:8px 0 4px;
+    background:linear-gradient(135deg,#1a2230,#141925);border:1px solid var(--line)}
+  .verdict .tag{display:inline-block;font:600 12px/1 var(--mono);letter-spacing:.1em;
+    text-transform:uppercase;padding:7px 12px;border-radius:999px;margin-bottom:14px}
+  .t-pivot{background:rgba(188,140,255,.13);color:var(--pivot);border:1px solid rgba(188,140,255,.35)}
+  .verdict h3{margin:0 0 8px;font-size:21px;letter-spacing:-.01em}
+  .verdict p{margin:0;color:var(--mut)}
+  .conf{margin-top:16px;font:13px/1 var(--mono);color:var(--dim)}
+  .bar{height:7px;border-radius:4px;background:var(--panel2);margin-top:8px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:65%;
+    background:linear-gradient(90deg,var(--pivot),var(--accent))}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card .k{font:11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+  .card .v{font-size:15px;font-weight:600}
+  .card .n{color:var(--mut);font-size:13px;margin-top:5px}
+  table{width:100%;border-collapse:collapse;margin:6px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+  td.s{font:700 13px var(--mono);white-space:nowrap}
+  .pill{display:inline-block;font:600 11px/1 var(--mono);padding:4px 8px;border-radius:6px}
+  .p-strong{background:rgba(63,185,80,.14);color:var(--go)}
+  .p-mid{background:rgba(210,153,34,.14);color:var(--warn)}
+  .p-weak{background:rgba(248,81,73,.14);color:var(--no)}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:6px 0;color:var(--mut)}
+  li b{color:var(--ink)}
+  .check{list-style:none;padding:0}
+  .check li{display:flex;gap:10px;align-items:flex-start;margin:9px 0}
+  .check .m{font:700 14px var(--mono);flex:0 0 auto;width:20px}
+  .yes{color:var(--go)} .nope{color:var(--no)}
+  .sprint{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .sprint ol{margin:0;padding-left:22px}
+  .sprint li{color:var(--ink);margin:10px 0}
+  .sprint li span{color:var(--mut)}
+  .foot{margin-top:40px;color:var(--dim);font:12px/1.5 var(--mono);border-top:1px solid var(--line);padding-top:16px}
+  .em{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CardEx — Validation Sprint</h1>
+  <p class="sub">Solana pricing oracle + autonomous trader for tokenized collectibles · 2026-06-19</p>
+
+  <div class="verdict">
+    <span class="tag t-pivot">Verdict · Validate, don't spend</span>
+    <h3>The $9.99 isn't the question. Demand is.</h3>
+    <p>The build is in good shape and crypto is genuinely necessary — but in CardEx's entire
+       history, <b style="color:var(--ink)">demand has never once been tested</b> (zero paying users,
+       zero user conversations, zero outreach). Paying for the API or writing more code spends
+       resources to <em>refine</em> a signal you haven't confirmed anyone wants. Correct instinct to pause.</p>
+    <div class="conf">CONFIDENCE 0.65 · go-validate (not go-build, not no-go)</div>
+    <div class="bar"><i></i></div>
+  </div>
+
+  <h2>Scorecard</h2>
+  <div class="grid">
+    <div class="card"><div class="k">Demand evidence</div><div class="v">Weak (1 / 3)</div>
+      <div class="n">TAM + narrative only. Never tested with a real user.</div></div>
+    <div class="card"><div class="k">Competition</div><div class="v">Sparse / whitespace</div>
+      <div class="n">No neutral agent-facing card oracle exists — but the prime buyer (Collector Crypt) self-serves with its own internal oracle.</div></div>
+    <div class="card"><div class="k">Technical feasibility</div><div class="v">Straightforward → Hard-but-solved</div>
+      <div class="n">Mostly built. Data-quality was the hard part — solved this session.</div></div>
+    <div class="card"><div class="k">Time to testable MVP</div><div class="v">Days → 2 weeks</div>
+      <div class="n">Shadow-mode trader proof + an alerts post are both &lt;2wk.</div></div>
+    <div class="card"><div class="k">Unfair advantage</div><div class="v">Real</div>
+      <div class="n">Cross-market offchain data depth + live x402/SolEnrich/8004 infra + the insured-value-as-graded-proxy insight.</div></div>
+    <div class="card"><div class="k">Crypto necessary?</div><div class="v">Yes</div>
+      <div class="n">The assets are tokenized on Solana; reading listings + executing trades + x402 all require the chain. Not ornamental.</div></div>
+  </div>
+
+  <h2>Demand signals (rubric-scored)</h2>
+  <table>
+    <tr><th>Signal</th><th>Found?</th><th>Strength</th></tr>
+    <tr><td>People hacking a manual version of the product</td><td class="s">No evidence</td><td><span class="pill p-weak">none</span></td></tr>
+    <tr><td>Protocol bounties / budget behind the need</td><td class="s">None found</td><td><span class="pill p-weak">none</span></td></tr>
+    <tr><td>On-chain activity growing</td><td class="s">CC market real (~$9M/mo) but &gt;90% gacha; thin secondary; 82% of listings = 1 vault</td><td><span class="pill p-mid">mixed</span></td></tr>
+    <tr><td>TAM / category growth</td><td class="s">Tokenized Pokémon ~$124M/mo, growing YoY</td><td><span class="pill p-mid">weak (TAM ≠ demand)</span></td></tr>
+    <tr><td>Paying users to date</td><td class="s">Zero, after a full build phase</td><td><span class="pill p-weak">absence of signal</span></td></tr>
+    <tr><td>User conversations done</td><td class="s">Zero, ever</td><td><span class="pill p-weak">untested</span></td></tr>
+  </table>
+  <p style="color:var(--mut);font-size:14px">Rubric score: <b style="color:var(--warn)">1 / 3 (weak)</b>.
+     Per the framework, weak demand → <em>go validate with a specific sprint</em>, not go build.</p>
+
+  <h2>Crypto necessity gut-check</h2>
+  <p style="color:var(--mut)">"What breaks if you remove the blockchain?" — <b class="em">The product does.</b>
+     The assets are pNFTs on Solana; reading live listings, executing buys/sells on Magic Eden/Tensor,
+     and per-call x402 payments all require the chain. The <em>paper</em>-pricing half (the moat) is a
+     plain database — but it only has value <em>because</em> it's compared against the onchain side.
+     Crypto is load-bearing, not decoration. Integration-first: CardEx composes existing protocols
+     (Magic Eden, Tensor, Pyth, SolEnrich, 8004) — no custom program, no audit cost. Advantage.</p>
+
+  <h2>Risk map</h2>
+  <table>
+    <tr><th>Risk</th><th>Severity</th><th>Note</th></tr>
+    <tr><td>Demand unproven</td><td class="s"><span class="pill p-weak">HIGH</span></td><td>The core risk. No validated buyer for either lane.</td></tr>
+    <tr><td>Agent-payment market is early</td><td class="s"><span class="pill p-weak">HIGH</span></td><td>Real x402 demand ~$14k/day; "agents pay per call" is a 2027 bet. Humans pay sooner.</td></tr>
+    <tr><td>Thin / concentrated liquidity</td><td class="s"><span class="pill p-mid">MED-HIGH</span></td><td>82% of CC listings = 1 vault; exit is the binding constraint for the trader.</td></tr>
+    <tr><td>Trader edge unconfirmed</td><td class="s"><span class="pill p-mid">MED</span></td><td>Honest gate + insured-value check suggest most "deals" are artifacts. Real edge TBD.</td></tr>
+    <tr><td>Regulatory</td><td class="s"><span class="pill p-strong">LOW</span></td><td>SEC/CFTC ruled collectibles non-securities; CC US-block avoided by trading on secondary.</td></tr>
+    <tr><td>Technical</td><td class="s"><span class="pill p-strong">LOW</span></td><td>Built and working; data-quality bugs found + fixed this session.</td></tr>
+  </table>
+
+  <h2>Go / No-Go criteria</h2>
+  <ul class="check">
+    <li><span class="m nope">✗</span><span><b>Demand score ≥ 2</b> — fails. It's ~1. <em style="color:var(--dim)">The one that matters most.</em></span></li>
+    <li><span class="m yes">✓</span><span><b>Technical feasibility</b> — solvable, mostly built.</span></li>
+    <li><span class="m yes">✓</span><span><b>Time to MVP ≤ 2 weeks</b> — shadow-mode proof / alerts post.</span></li>
+    <li><span class="m yes">✓</span><span><b>Unfair advantage</b> — data depth + infra + insured-value insight.</span></li>
+    <li><span class="m yes">✓</span><span><b>Crypto necessary</b> — yes.</span></li>
+  </ul>
+  <p style="color:var(--mut);font-size:14px">4 of 5 met — but the failing one is <b>demand</b>, and no
+     hard No-Go trigger fires (demand isn't literally 0; no funded competitor shipped the same product;
+     problem is solved; crypto isn't ornamental). That's the textbook <b class="em">"go validate, don't build yet"</b> profile.</p>
+
+  <h2>The 1-week demand sprint (do this instead of paying $9.99)</h2>
+  <div class="sprint">
+    <ol>
+      <li><b>Free edge read first</b> <span>— finish the insured-value-anchored gate (no API spend). If no real, persistent, post-cost edges exist on $300+ cards, the trader thesis weakens before you risk a dollar.</span></li>
+      <li><b>Lane A — test human pull</b> <span>— post the existing live demo + the insured-value mispricing finding as content in 2–3 channels (r/PokemonInvesting, a Solana NFT-trader Discord, X RWA). Measure: does anyone ask for access / the alert feed?</span></li>
+      <li><b>Lane B — talk to 3–5 operators</b> <span>— DM Magic Eden / Collector Crypt arbitrage bot runners. Ask "how do you price tokenized slabs today / what's annoying about it?" — listen for workarounds, not "I'd use that."</span></li>
+      <li><b>Decision gate</b> <span>— pay $9.99 (then later $99) only when EITHER (a) someone asks to pay for the signal, OR (b) the free edge read shows a real edge worth refining with graded cross-validation. Not before.</span></li>
+    </ol>
+  </div>
+
+  <div class="foot">
+    Framework: validate-idea sprint · demand rubric · pivot-or-persist.
+    Grounded in this session's 4-track market research + live CC data.
+    Artifact written to validation-cardex.html · context → .superstack/idea-context.md
+  </div>
+</div>
+</body>
+</html>

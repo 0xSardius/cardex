@@ -84,6 +84,45 @@ interface SetRow {
   name: string;
 }
 
+/**
+ * Resolution context: catalog lookup maps shared by the main ingestion and
+ * the standalone mint backfill. Built once per run.
+ */
+export interface ResolutionContext {
+  collectibleByKey: Map<string, string>;
+  setCodeByName: Map<string, string>;
+}
+
+export async function buildResolutionContext(sql: any): Promise<ResolutionContext> {
+  // Pokemon collectibles keyed by setcode|number (number lowercased so
+  // alphanumeric subset codes like "tg1" match the normalizer's output).
+  const collectibles = (await sql`
+    SELECT c.id, s.code AS set_code, c.set_number
+    FROM collectibles c
+    JOIN sets s ON s.id = c.set_id
+    WHERE c.game = 'pokemon' AND c.set_number IS NOT NULL
+  `) as CollectibleRow[];
+  const collectibleByKey = new Map<string, string>();
+  for (const row of collectibles) {
+    collectibleByKey.set(
+      `${row.set_code.toLowerCase()}|${row.set_number.toLowerCase()}`,
+      row.id
+    );
+  }
+
+  // Pokemon sets indexed by lowercased name for the English-set fallback path
+  // (CC's Set field is "Brilliant Stars - English", not a code).
+  const setRows = (await sql`
+    SELECT id, code, name FROM sets WHERE game = 'pokemon'
+  `) as SetRow[];
+  const setCodeByName = new Map<string, string>();
+  for (const row of setRows) {
+    setCodeByName.set(row.name.trim().toLowerCase(), row.code);
+  }
+
+  return { collectibleByKey, setCodeByName };
+}
+
 export async function ingestMagicEdenListings(
   sql: any,
   client: MagicEdenClient,
@@ -93,31 +132,8 @@ export async function ingestMagicEdenListings(
   const symbol = opts.collectionSymbol ?? COLLECTOR_CRYPT_SLUG;
   let mintBudget = maxMintLookups;
 
-  // 1. Load Pokemon collectibles for mint→catalog resolution.
-  const collectibles = (await sql`
-    SELECT c.id, s.code AS set_code, c.set_number
-    FROM collectibles c
-    JOIN sets s ON s.id = c.set_id
-    WHERE c.game = 'pokemon' AND c.set_number IS NOT NULL
-  `) as CollectibleRow[];
-
-  const collectibleByKey = new Map<string, string>();
-  for (const row of collectibles) {
-    collectibleByKey.set(
-      `${row.set_code.toLowerCase()}|${row.set_number}`,
-      row.id
-    );
-  }
-
-  // 1b. Load Pokemon sets indexed by lowercased name for the English-set
-  // fallback path (CC's Set field is "Brilliant Stars - English", not a code).
-  const setRows = (await sql`
-    SELECT id, code, name FROM sets WHERE game = 'pokemon'
-  `) as SetRow[];
-  const setCodeByName = new Map<string, string>();
-  for (const row of setRows) {
-    setCodeByName.set(row.name.trim().toLowerCase(), row.code);
-  }
+  // 1. Load catalog resolution maps.
+  const { collectibleByKey, setCodeByName } = await buildResolutionContext(sql);
 
   // 2. Load known mints so we don't re-resolve.
   const knownMintsRows = (await sql`
@@ -276,7 +292,7 @@ function derivePriceFields(listing: MagicEdenListing): {
   return { priceUsd, priceUsdc, priceSol };
 }
 
-async function resolveAndStoreMint(
+export async function resolveAndStoreMint(
   sql: any,
   client: MagicEdenClient,
   mintAddress: string,
@@ -319,8 +335,13 @@ async function resolveAndStoreMint(
     if (fuzzy[0]) resolvedSetCode = fuzzy[0].code;
   }
 
-  if (isPokemon && resolvedSetCode && cardNumber) {
-    const lookupKey = `${resolvedSetCode.toLowerCase()}|${cardNumber}`;
+  // Language gate: our catalog is English-only (pokemontcg.io). Japanese sets
+  // reuse English set codes (e.g. sv8 = "Surging Sparks" EN but "Super Electric
+  // Breaker" JP), so matching a non-English pNFT by set_code+number produces a
+  // WRONG card (Japanese Larvesta → English Drilbur). Only match English mints;
+  // non-English stays unresolved until a JP catalog source is added.
+  if (isPokemon && resolvedSetCode && cardNumber && parsed.language === "en") {
+    const lookupKey = `${resolvedSetCode.toLowerCase()}|${cardNumber.toLowerCase()}`;
     collectibleId = collectibleByKey.get(lookupKey) ?? null;
   }
 
