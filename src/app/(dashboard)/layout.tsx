@@ -18,6 +18,7 @@ export default function DashboardLayout({
               CARDEX
             </Link>
             <div className="hidden sm:flex items-center gap-1">
+              <NavLink href="/gacha">Gacha EV</NavLink>
               <NavLink href="/search">Search</NavLink>
               <NavLink href="/arbitrage">Arbitrage</NavLink>
               <NavLink href="/mtgo-spread">MTGO Spread</NavLink>
@@ -34,6 +35,7 @@ export default function DashboardLayout({
         </div>
         {/* Mobile nav */}
         <div className="flex sm:hidden border-t border-[var(--cx-border)] px-4 py-2 gap-1">
+          <NavLink href="/gacha">Gacha</NavLink>
           <NavLink href="/search">Search</NavLink>
           <NavLink href="/arbitrage">Arbitrage</NavLink>
           <NavLink href="/mtgo-spread">MTGO</NavLink>
