@@ -127,6 +127,16 @@ export const routesConfig = {
     description:
       "Sorted list of active onchain listings underpriced vs paper-market median, with optional seller risk + cluster enrichment",
   },
+  "GET /api/v1/gacha/ev": {
+    accepts: {
+      scheme: "exact",
+      payTo: PAY_TO,
+      price: "$0.001",
+      network: NETWORK,
+    },
+    description:
+      "Live pack EV for a Collector Crypt / Jupiter Gacha machine — platform vs observed vs fee-netted realizable, with pull-sample stats and chase cards",
+  },
 };
 
 export { resourceServer, NETWORK, PAY_TO };
