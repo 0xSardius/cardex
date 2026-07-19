@@ -1,6 +1,36 @@
 # CardEx — Development Checkpoint
 
-## Last Session: 2026-06-23 — Validation sprint + data-foundation rebuild (autonomous-trader thesis tested → weakened)
+## Last Session: 2026-07-19 — Gacha Pack EV Engine built end-to-end (Spec 01 MVP, one session)
+
+### TL;DR
+Spec 01 (Pack EV Engine) went from zero to a working product in one session: **the CC Gacha API is fully open (no key needed) and Jupiter Gacha runs directly on it** (`memo_slug: "jupiter"` in the winners feed). Built the data layer (3 tables + pollers), the exit-valuation EV composer, the x402 endpoint, and the free `/gacha` dashboard. **First honest numbers on `pokemon_50`: platform claims +10.7% EV (insured basis); observed pulls say −6.6%; guaranteed buyback exit −5.9%; fee-netted realizable −14.8%.** That headline-vs-realizable gap is the product. All committed + pushed; **NOT yet deployed** (Railway CLI auth expired — needs interactive `railway login`).
+
+### What shipped (commits `ae54a5a` → `7e6d1de`)
+1. **API recon** (`docs/jupiter-gacha/05-api-recon.md`): read endpoints keyless; `getNfts` = top-100/tier by insured value (no pagination); `getAllWinners` caps at 200, latest-only → forward accumulation is mandatory, missed windows unrecoverable (~30 pulls/min platform-wide).
+2. **Data layer**: `gacha_machines` (snapshots: odds/stock/buyback/platform-EV), `gacha_pool_nfts`, `gacha_pulls` (memo_slug attribution). `GachaClient`, `ingestGacha{Machines,Pool,Pulls}`, applied via `scripts/apply-gacha-tables.ts` (migrations still drift-managed).
+3. **Title parser** (`gacha-title-parser.ts`) — the long-deferred token-name parser. Two grammars (CC-native + PSA-label). Resolver: abbrev-as-code, punctuation-insensitive substring scan (latest-start-position wins), year-pinned promo sets, TG/GG/SV subset retry, era-prefixed promo numbers. **Pool resolution: 67-68% count AND value on epic tier** (vs 16% historical). Residue = ~22% non-English (gated by design) + sets absent upstream (2026 `mep` promos, deck exclusives). Delta-seeded me3/me4/me5 (366 cards, `scripts/seed-pokemon-delta.ts`).
+4. **EV composer** (`src/lib/gacha/ev.ts`): EV ladder — `platform_insured` / `observed_insured` (n, 95% CI) / `buyback_floor` / `realizable` (max(buyback 85%·insured, market×0.98 ME fee) where market = graded paper when available, else insured×0.93 haircut from the June sale-comps study). Graded-paper joins are wired and light up automatically when PPT data lands. Observed-vs-stated tier shares + coverage + caveats in every payload.
+5. **`GET /api/v1/gacha/ev?pack=…`** — $0.001 x402, ETag, 60s cache. **`/gacha` dashboard** — free, screenshot-friendly, in nav.
+6. **In-process pollers** (`src/instrumentation.ts`): pulls every 150s, machines+pool every 30min + boot prime. Railway Cron can't go that low; service is always-on. `GACHA_POLL_DISABLED=1` opts out.
+7. **Paper prices refreshed** (were stale since 6/19): 71K TCGPlayer + 81K CardMarket points dated today.
+
+### Key market observations (first 200-pull sample)
+- Jupiter frontend ≈ 26-32% of platform pulls; `cc` most of the rest; `slabz`/`sol`/`comic` white-labels exist.
+- Common tier (80% of odds) is heavily Japanese-language stock → falls back to insured basis.
+- Observed insured mean $46.72 (n=58, ±$5.19) vs platform EV $55.33 — outside the CI even in the first sample. Watch as n grows.
+
+### NOT done / next session
+1. **Deploy**: `railway login` (interactive, real terminal) → `railway up`. Until then a local pulls loop (background task) accumulates data only while that terminal session lives.
+2. **USER: free PPT key** → `POKEMON_PRICE_TRACKER_API_KEY` → `npm run ingest:pokemon-graded` → paper-truth EV line lights up (gacha slabs are graded; raw comps understate).
+3. **USER: request CC Gacha partner key** (docs.collectorcrypt.com/gacha/api) — not a technical blocker (reads are open), but the partnership conversation-starter.
+4. Widen pool ingestion to all pokemon tiers (`GACHA_POOL_CODES=pokemon_25,pokemon_50,pokemon_250,pokemon_1000,pokemon_2500`) — pulls already capture all packs.
+5. Apply `gacha-title-parser` to the main ME listings resolver (`magic-eden.ts` uses only sparse attributes — token `name` would lift the 16%).
+6. Distribution once deployed: tweet the ladder screenshot, Discord/Telegram `/ev` bot (Spec 04 features), RipIndex-as-customer outreach.
+7. Season 1 ends ~8/10 — every day undeployed loses pull history.
+
+---
+
+## Previous Session: 2026-06-23 — Validation sprint + data-foundation rebuild (autonomous-trader thesis tested → weakened)
 
 ### TL;DR
 Stepped back to **validate the direction before spending** (PPT API or capital). Rebuilt the rotted data foundation, built an honest cost model + free validation gates, and **the live data weakened the autonomous-trading thesis**. Pivoted to testing **Lane A demand** (the mispricing signal as a human lead) — the one thing never tested in CardEx's history. No capital deployed, PPT API NOT bought (correctly — see below).
