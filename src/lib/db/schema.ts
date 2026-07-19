@@ -304,6 +304,104 @@ export const mintCardMap = pgTable(
   ]
 );
 
+// ─── Gacha Machines (CC Gacha API snapshots — Jupiter Gacha expansion) ────────
+//
+// Append-only snapshots of /api/machines per poll. Odds, stock, and platform
+// EV drift constantly; history powers the EV sparkline and restock detection
+// (stock diffs between consecutive snapshots). See docs/jupiter-gacha/05-api-recon.md.
+
+export const gachaMachines = pgTable(
+  "gacha_machines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: varchar("code", { length: 40 }).notNull(), // "pokemon_50" | "pokemon_250" | ...
+    name: varchar("name", { length: 120 }),
+    priceUsd: decimal("price_usd", { precision: 12, scale: 2 }),
+    instantBuybackPct: real("instant_buyback_pct"), // 85 → buyback pays 85% of insured value
+    odds: jsonb("odds"), // { common: 0.8, uncommon: 0.15, rare: 0.04, epic: 0.01 }
+    tierRanges: jsonb("tier_ranges"), // insured-value bounds per tier
+    stock: jsonb("stock"), // { common: 1761, ... }
+    platformEv: decimal("platform_ev", { precision: 14, scale: 4 }), // CC's own rarity-weighted expected INSURED value
+    targetEv: decimal("target_ev", { precision: 14, scale: 4 }),
+    isPublic: boolean("is_public").default(true),
+    observedAt: timestamp("observed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("gacha_machines_code_observed_idx").on(t.code, t.observedAt)]
+);
+
+// ─── Gacha Pool NFTs (top-100 per tier via /api/getNfts) ──────────────────────
+//
+// The API caps at the top 100 NFTs per (machine, rarity) by insured value —
+// complete chase-card coverage, truncated tail. lastSeenAt going stale means
+// "left the visible top-100" (pulled OR displaced), NOT necessarily "left the
+// pool". Tier means for EV come from gacha_pulls (unbiased draws), not here.
+
+export const gachaPoolNfts = pgTable(
+  "gacha_pool_nfts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    machineCode: varchar("machine_code", { length: 40 }).notNull(),
+    mintAddress: varchar("mint_address", { length: 64 }).notNull(),
+    rarity: varchar("rarity", { length: 20 }).notNull(), // "common" | "uncommon" | "rare" | "epic"
+    name: text("name"),
+    description: text("description"), // full card title incl. grade + set — the resolution source
+    insuredValue: decimal("insured_value", { precision: 12, scale: 2 }),
+    imageUrl: text("image_url"),
+    attributes: jsonb("attributes"),
+    collectibleId: uuid("collectible_id").references(() => collectibles.id),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("gacha_pool_nfts_machine_mint_idx").on(
+      t.machineCode,
+      t.mintAddress
+    ),
+    index("gacha_pool_nfts_machine_rarity_idx").on(t.machineCode, t.rarity),
+    index("gacha_pool_nfts_collectible_idx").on(t.collectibleId),
+  ]
+);
+
+// ─── Gacha Pulls (winners feed accumulation) ──────────────────────────────────
+//
+// /api/getAllWinners only serves the latest ~200 rows — history must be
+// accumulated forward by a frequent cron. Each row is one pull: an unbiased
+// within-tier draw, so this table is the statistical basis for per-tier value
+// distributions (and observed-vs-stated odds later). memo_slug attributes the
+// frontend ("jupiter" | "cc" | "slabz").
+
+export const gachaPulls = pgTable(
+  "gacha_pulls",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    winner: varchar("winner", { length: 64 }),
+    mintAddress: varchar("mint_address", { length: 64 }).notNull(),
+    packType: varchar("pack_type", { length: 40 }).notNull(),
+    prizeTier: integer("prize_tier"), // 1=epic 2=rare 3=uncommon 4=common
+    rarity: varchar("rarity", { length: 20 }),
+    insuredValue: decimal("insured_value", { precision: 12, scale: 2 }),
+    memoSlug: varchar("memo_slug", { length: 30 }),
+    nftName: text("nft_name"), // full json_name — the resolution source
+    collectibleId: uuid("collectible_id").references(() => collectibles.id),
+    pulledAt: timestamp("pulled_at", { withTimezone: true }).notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("gacha_pulls_mint_pulled_idx").on(t.mintAddress, t.pulledAt),
+    index("gacha_pulls_pack_pulled_idx").on(t.packType, t.pulledAt),
+    index("gacha_pulls_slug_idx").on(t.memoSlug),
+    index("gacha_pulls_collectible_idx").on(t.collectibleId),
+  ]
+);
+
 // ─── Payment Events (x402 ledger) ─────────────────────────────────────────────
 
 export const paymentEvents = pgTable(
